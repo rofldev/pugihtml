@@ -185,23 +185,23 @@ namespace
 
 namespace
 {
-	static const size_t xml_memory_page_size = 32768;
+	static const size_t html_memory_page_size = 32768;
 
-	static const uintptr_t xml_memory_page_alignment = 32;
-	static const uintptr_t xml_memory_page_pointer_mask = ~(xml_memory_page_alignment - 1);
-	static const uintptr_t xml_memory_page_name_allocated_mask = 16;
-	static const uintptr_t xml_memory_page_value_allocated_mask = 8;
-	static const uintptr_t xml_memory_page_type_mask = 7;
+	static const uintptr_t html_memory_page_alignment = 32;
+	static const uintptr_t html_memory_page_pointer_mask = ~(html_memory_page_alignment - 1);
+	static const uintptr_t html_memory_page_name_allocated_mask = 16;
+	static const uintptr_t html_memory_page_value_allocated_mask = 8;
+	static const uintptr_t html_memory_page_type_mask = 7;
 
-	struct xml_allocator;
+	struct html_allocator;
 
-	struct xml_memory_page
+	struct html_memory_page
 	{
-		static xml_memory_page* construct(void* memory)
+		static html_memory_page* construct(void* memory)
 		{
 			if (!memory) return 0; //$ redundant, left for performance
 
-			xml_memory_page* result = static_cast<xml_memory_page*>(memory);
+			html_memory_page* result = static_cast<html_memory_page*>(memory);
 
 			result->allocator = 0;
 			result->memory = 0;
@@ -213,12 +213,12 @@ namespace
 			return result;
 		}
 
-		xml_allocator* allocator;
+		html_allocator* allocator;
 
 		void* memory;
 
-		xml_memory_page* prev;
-		xml_memory_page* next;
+		html_memory_page* prev;
+		html_memory_page* next;
 
 		size_t busy_size;
 		size_t freed_size;
@@ -226,31 +226,31 @@ namespace
 		char data[1];
 	};
 
-	struct xml_memory_string_header
+	struct html_memory_string_header
 	{
 		uint16_t page_offset; // offset from page->data
 		uint16_t full_size; // 0 if string occupies whole page
 	};
 
-	struct xml_allocator
+	struct html_allocator
 	{
-		xml_allocator(xml_memory_page* root): _root(root), _busy_size(root->busy_size)
+		html_allocator(html_memory_page* root): _root(root), _busy_size(root->busy_size)
 		{
 		}
 
-		xml_memory_page* allocate_page(size_t data_size)
+		html_memory_page* allocate_page(size_t data_size)
 		{
-			size_t size = offsetof(xml_memory_page, data) + data_size;
+			size_t size = offsetof(html_memory_page, data) + data_size;
 
 			// allocate block with some alignment, leaving memory for worst-case padding
-			void* memory = global_allocate(size + xml_memory_page_alignment);
+			void* memory = global_allocate(size + html_memory_page_alignment);
 			if (!memory) return 0;
 
 			// align upwards to page boundary
-			void* page_memory = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(memory) + (xml_memory_page_alignment - 1)) & ~(xml_memory_page_alignment - 1));
+			void* page_memory = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(memory) + (html_memory_page_alignment - 1)) & ~(html_memory_page_alignment - 1));
 
 			// prepare page structure
-			xml_memory_page* page = xml_memory_page::construct(page_memory);
+			html_memory_page* page = html_memory_page::construct(page_memory);
 
 			page->memory = memory;
 			page->allocator = _root->allocator;
@@ -258,16 +258,16 @@ namespace
 			return page;
 		}
 
-		static void deallocate_page(xml_memory_page* page)
+		static void deallocate_page(html_memory_page* page)
 		{
 			global_deallocate(page->memory);
 		}
 
-		void* allocate_memory_oob(size_t size, xml_memory_page*& out_page);
+		void* allocate_memory_oob(size_t size, html_memory_page*& out_page);
 
-		void* allocate_memory(size_t size, xml_memory_page*& out_page)
+		void* allocate_memory(size_t size, html_memory_page*& out_page)
 		{
-			if (_busy_size + size > xml_memory_page_size) return allocate_memory_oob(size, out_page);
+			if (_busy_size + size > html_memory_page_size) return allocate_memory_oob(size, out_page);
 
 			void* buf = _root->data + _busy_size;
 
@@ -278,7 +278,7 @@ namespace
 			return buf;
 		}
 
-		void deallocate_memory(void* ptr, size_t size, xml_memory_page* page)
+		void deallocate_memory(void* ptr, size_t size, html_memory_page* page)
 		{
 			if (page == _root) page->busy_size = _busy_size;
 
@@ -316,13 +316,13 @@ namespace
 		char_t* allocate_string(size_t length)
 		{
 			// allocate memory for string and header block
-			size_t size = sizeof(xml_memory_string_header) + length * sizeof(char_t);
+			size_t size = sizeof(html_memory_string_header) + length * sizeof(char_t);
 			
 			// round size up to pointer alignment boundary
 			size_t full_size = (size + (sizeof(void*) - 1)) & ~(sizeof(void*) - 1);
 
-			xml_memory_page* page;
-			xml_memory_string_header* header = static_cast<xml_memory_string_header*>(allocate_memory(full_size, page));
+			html_memory_page* page;
+			html_memory_string_header* header = static_cast<html_memory_string_header*>(allocate_memory(full_size, page));
 
 			if (!header) return 0;
 
@@ -342,11 +342,11 @@ namespace
 		void deallocate_string(char_t* string)
 		{
 			// get header
-			xml_memory_string_header* header = reinterpret_cast<xml_memory_string_header*>(string) - 1;
+			html_memory_string_header* header = reinterpret_cast<html_memory_string_header*>(string) - 1;
 
 			// deallocate
-			size_t page_offset = offsetof(xml_memory_page, data) + header->page_offset;
-			xml_memory_page* page = reinterpret_cast<xml_memory_page*>(reinterpret_cast<char*>(header) - page_offset);
+			size_t page_offset = offsetof(html_memory_page, data) + header->page_offset;
+			html_memory_page* page = reinterpret_cast<html_memory_page*>(reinterpret_cast<char*>(header) - page_offset);
 
 			// if full_size == 0 then this string occupies the whole page
 			size_t full_size = header->full_size == 0 ? page->busy_size : header->full_size;
@@ -354,15 +354,15 @@ namespace
 			deallocate_memory(header, full_size, page);
 		}
 
-		xml_memory_page* _root;
+		html_memory_page* _root;
 		size_t _busy_size;
 	};
 
-	PUGIHTML_NO_INLINE void* xml_allocator::allocate_memory_oob(size_t size, xml_memory_page*& out_page)
+	PUGIHTML_NO_INLINE void* html_allocator::allocate_memory_oob(size_t size, html_memory_page*& out_page)
 	{
-		const size_t large_allocation_threshold = xml_memory_page_size / 4;
+		const size_t large_allocation_threshold = html_memory_page_size / 4;
 
-		xml_memory_page* page = allocate_page(size <= large_allocation_threshold ? xml_memory_page_size : size);
+		html_memory_page* page = allocate_page(size <= large_allocation_threshold ? html_memory_page_size : size);
 		if (!page) return 0;
 
 		if (size <= large_allocation_threshold)
@@ -400,10 +400,10 @@ namespace
 namespace pugi
 {
 	/// A 'name=value' HTML attribute structure.
-	struct xml_attribute_struct
+	struct html_attribute_struct
 	{
 		/// Default ctor
-		xml_attribute_struct(xml_memory_page* page): header(reinterpret_cast<uintptr_t>(page)), name(0), value(0), prev_attribute_c(0), next_attribute(0)
+		html_attribute_struct(html_memory_page* page): header(reinterpret_cast<uintptr_t>(page)), name(0), value(0), prev_attribute_c(0), next_attribute(0)
 		{
 		}
 
@@ -412,123 +412,123 @@ namespace pugi
 		char_t* name;	///< Pointer to attribute name.
 		char_t*	value;	///< Pointer to attribute value.
 
-		xml_attribute_struct* prev_attribute_c;	///< Previous attribute (cyclic list)
-		xml_attribute_struct* next_attribute;	///< Next attribute
+		html_attribute_struct* prev_attribute_c;	///< Previous attribute (cyclic list)
+		html_attribute_struct* next_attribute;	///< Next attribute
 	};
 
 	/// An HTML document tree node.
-	struct xml_node_struct
+	struct html_node_struct
 	{
 		/// Default ctor
 		/// \param type - node type
-		xml_node_struct(xml_memory_page* page, xml_node_type type): header(reinterpret_cast<uintptr_t>(page) | (type - 1)), parent(0), name(0), value(0), first_child(0), prev_sibling_c(0), next_sibling(0), first_attribute(0)
+		html_node_struct(html_memory_page* page, html_node_type type): header(reinterpret_cast<uintptr_t>(page) | (type - 1)), parent(0), name(0), value(0), first_child(0), prev_sibling_c(0), next_sibling(0), first_attribute(0)
 		{
 		}
 
 		uintptr_t header;
 
-		xml_node_struct*		parent;					///< Pointer to parent
+		html_node_struct*		parent;					///< Pointer to parent
 
 		char_t*					name;					///< Pointer to element name.
 		char_t*					value;					///< Pointer to any associated string data.
 
-		xml_node_struct*		first_child;			///< First child
+		html_node_struct*		first_child;			///< First child
 		
-		xml_node_struct*		prev_sibling_c;			///< Left brother (cyclic list)
-		xml_node_struct*		next_sibling;			///< Right brother
+		html_node_struct*		prev_sibling_c;			///< Left brother (cyclic list)
+		html_node_struct*		next_sibling;			///< Right brother
 		
-		xml_attribute_struct*	first_attribute;		///< First attribute
+		html_attribute_struct*	first_attribute;		///< First attribute
 	};
 }
 
 namespace
 {
-	struct xml_document_struct: public xml_node_struct, public xml_allocator
+	struct html_document_struct: public html_node_struct, public html_allocator
 	{
-		xml_document_struct(xml_memory_page* page): xml_node_struct(page, node_document), xml_allocator(page), buffer(0)
+		html_document_struct(html_memory_page* page): html_node_struct(page, node_document), html_allocator(page), buffer(0)
 		{
 		}
 
 		const char_t* buffer;
 	};
 
-	static inline xml_allocator& get_allocator(const xml_node_struct* node)
+	static inline html_allocator& get_allocator(const html_node_struct* node)
 	{
 		assert(node);
 
-		return *reinterpret_cast<xml_memory_page*>(node->header & xml_memory_page_pointer_mask)->allocator;
+		return *reinterpret_cast<html_memory_page*>(node->header & html_memory_page_pointer_mask)->allocator;
 	}
 }
 
 // Low-level DOM operations
 namespace
 {
-	inline xml_attribute_struct* allocate_attribute(xml_allocator& alloc)
+	inline html_attribute_struct* allocate_attribute(html_allocator& alloc)
 	{
-		xml_memory_page* page;
-		void* memory = alloc.allocate_memory(sizeof(xml_attribute_struct), page);
+		html_memory_page* page;
+		void* memory = alloc.allocate_memory(sizeof(html_attribute_struct), page);
 
-		return new (memory) xml_attribute_struct(page);
+		return new (memory) html_attribute_struct(page);
 	}
 
-	inline xml_node_struct* allocate_node(xml_allocator& alloc, xml_node_type type)
+	inline html_node_struct* allocate_node(html_allocator& alloc, html_node_type type)
 	{
-		xml_memory_page* page;
-		void* memory = alloc.allocate_memory(sizeof(xml_node_struct), page);
+		html_memory_page* page;
+		void* memory = alloc.allocate_memory(sizeof(html_node_struct), page);
 
-		return new (memory) xml_node_struct(page, type);
+		return new (memory) html_node_struct(page, type);
 	}
 
-	inline void destroy_attribute(xml_attribute_struct* a, xml_allocator& alloc)
+	inline void destroy_attribute(html_attribute_struct* a, html_allocator& alloc)
 	{
 		uintptr_t header = a->header;
 
-		if (header & xml_memory_page_name_allocated_mask) alloc.deallocate_string(a->name);
-		if (header & xml_memory_page_value_allocated_mask) alloc.deallocate_string(a->value);
+		if (header & html_memory_page_name_allocated_mask) alloc.deallocate_string(a->name);
+		if (header & html_memory_page_value_allocated_mask) alloc.deallocate_string(a->value);
 
-		alloc.deallocate_memory(a, sizeof(xml_attribute_struct), reinterpret_cast<xml_memory_page*>(header & xml_memory_page_pointer_mask));
+		alloc.deallocate_memory(a, sizeof(html_attribute_struct), reinterpret_cast<html_memory_page*>(header & html_memory_page_pointer_mask));
 	}
 
-	inline void destroy_node(xml_node_struct* n, xml_allocator& alloc)
+	inline void destroy_node(html_node_struct* n, html_allocator& alloc)
 	{
 		uintptr_t header = n->header;
 
-		if (header & xml_memory_page_name_allocated_mask) alloc.deallocate_string(n->name);
-		if (header & xml_memory_page_value_allocated_mask) alloc.deallocate_string(n->value);
+		if (header & html_memory_page_name_allocated_mask) alloc.deallocate_string(n->name);
+		if (header & html_memory_page_value_allocated_mask) alloc.deallocate_string(n->value);
 
-		for (xml_attribute_struct* attr = n->first_attribute; attr; )
+		for (html_attribute_struct* attr = n->first_attribute; attr; )
 		{
-			xml_attribute_struct* next = attr->next_attribute;
+			html_attribute_struct* next = attr->next_attribute;
 
 			destroy_attribute(attr, alloc);
 
 			attr = next;
 		}
 
-		for (xml_node_struct* child = n->first_child; child; )
+		for (html_node_struct* child = n->first_child; child; )
 		{
-			xml_node_struct* next = child->next_sibling;
+			html_node_struct* next = child->next_sibling;
 
 			destroy_node(child, alloc);
 
 			child = next;
 		}
 
-		alloc.deallocate_memory(n, sizeof(xml_node_struct), reinterpret_cast<xml_memory_page*>(header & xml_memory_page_pointer_mask));
+		alloc.deallocate_memory(n, sizeof(html_node_struct), reinterpret_cast<html_memory_page*>(header & html_memory_page_pointer_mask));
 	}
 
-	PUGIHTML_NO_INLINE xml_node_struct* append_node(xml_node_struct* node, xml_allocator& alloc, xml_node_type type = node_element)
+	PUGIHTML_NO_INLINE html_node_struct* append_node(html_node_struct* node, html_allocator& alloc, html_node_type type = node_element)
 	{
-		xml_node_struct* child = allocate_node(alloc, type);
+		html_node_struct* child = allocate_node(alloc, type);
 		if (!child) return 0;
 
 		child->parent = node;
 
-		xml_node_struct* first_child = node->first_child;
+		html_node_struct* first_child = node->first_child;
 			
 		if (first_child)
 		{
-			xml_node_struct* last_child = first_child->prev_sibling_c;
+			html_node_struct* last_child = first_child->prev_sibling_c;
 
 			last_child->next_sibling = child;
 			child->prev_sibling_c = last_child;
@@ -543,16 +543,16 @@ namespace
 		return child;
 	}
 
-	PUGIHTML_NO_INLINE xml_attribute_struct* append_attribute_ll(xml_node_struct* node, xml_allocator& alloc)
+	PUGIHTML_NO_INLINE html_attribute_struct* append_attribute_ll(html_node_struct* node, html_allocator& alloc)
 	{
-		xml_attribute_struct* a = allocate_attribute(alloc);
+		html_attribute_struct* a = allocate_attribute(alloc);
 		if (!a) return 0;
 
-		xml_attribute_struct* first_attribute = node->first_attribute;
+		html_attribute_struct* first_attribute = node->first_attribute;
 
 		if (first_attribute)
 		{
-			xml_attribute_struct* last_attribute = first_attribute->prev_attribute_c;
+			html_attribute_struct* last_attribute = first_attribute->prev_attribute_c;
 
 			last_attribute->next_attribute = a;
 			a->prev_attribute_c = last_attribute;
@@ -990,7 +990,7 @@ namespace
 		return *reinterpret_cast<unsigned char*>(&ui) == 1;
 	}
 
-	xml_encoding get_wchar_encoding()
+	html_encoding get_wchar_encoding()
 	{
 		STATIC_ASSERT(sizeof(wchar_t) == 2 || sizeof(wchar_t) == 4);
 
@@ -1000,7 +1000,7 @@ namespace
 			return is_little_endian() ? encoding_utf32_le : encoding_utf32_be;
 	}
 
-	xml_encoding guess_buffer_encoding(uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3)
+	html_encoding guess_buffer_encoding(uint8_t d0, uint8_t d1, uint8_t d2, uint8_t d3)
 	{
 		// look for BOM in first few bytes
 		if (d0 == 0 && d1 == 0 && d2 == 0xfe && d3 == 0xff) return encoding_utf32_be;
@@ -1024,7 +1024,7 @@ namespace
 		return encoding_utf8;
 	}
 
-	xml_encoding get_buffer_encoding(xml_encoding encoding, const void* contents, size_t size)
+	html_encoding get_buffer_encoding(html_encoding encoding, const void* contents, size_t size)
 	{
 		// replace wchar encoding with utf implementation
 		if (encoding == encoding_wchar) return get_wchar_encoding();
@@ -1071,7 +1071,7 @@ namespace
 	}
 
 #ifdef PUGIHTML_WCHAR_MODE
-	inline bool need_endian_swap_utf(xml_encoding le, xml_encoding re)
+	inline bool need_endian_swap_utf(html_encoding le, html_encoding re)
 	{
 		return (le == encoding_utf16_be && re == encoding_utf16_le) || (le == encoding_utf16_le && re == encoding_utf16_be) ||
 		       (le == encoding_utf32_be && re == encoding_utf32_le) || (le == encoding_utf32_le && re == encoding_utf32_be);
@@ -1163,10 +1163,10 @@ namespace
 		return true;
 	}
 
-	bool convert_buffer(char_t*& out_buffer, size_t& out_length, xml_encoding encoding, const void* contents, size_t size, bool is_mutable)
+	bool convert_buffer(char_t*& out_buffer, size_t& out_length, html_encoding encoding, const void* contents, size_t size, bool is_mutable)
 	{
 		// get native encoding
-		xml_encoding wchar_encoding = get_wchar_encoding();
+		html_encoding wchar_encoding = get_wchar_encoding();
 
 		// fast path: no conversion required
 		if (encoding == wchar_encoding) return get_mutable_buffer(out_buffer, out_length, contents, size, is_mutable);
@@ -1180,7 +1180,7 @@ namespace
 		// source encoding is utf16
 		if (encoding == encoding_utf16_be || encoding == encoding_utf16_le)
 		{
-			xml_encoding native_encoding = is_little_endian() ? encoding_utf16_le : encoding_utf16_be;
+			html_encoding native_encoding = is_little_endian() ? encoding_utf16_le : encoding_utf16_be;
 
 			return (native_encoding == encoding) ?
 				convert_buffer_utf16(out_buffer, out_length, contents, size, opt_false()) :
@@ -1190,7 +1190,7 @@ namespace
 		// source encoding is utf32
 		if (encoding == encoding_utf32_be || encoding == encoding_utf32_le)
 		{
-			xml_encoding native_encoding = is_little_endian() ? encoding_utf32_le : encoding_utf32_be;
+			html_encoding native_encoding = is_little_endian() ? encoding_utf32_le : encoding_utf32_be;
 
 			return (native_encoding == encoding) ?
 				convert_buffer_utf32(out_buffer, out_length, contents, size, opt_false()) :
@@ -1245,7 +1245,7 @@ namespace
 		return true;
 	}
 
-	bool convert_buffer(char_t*& out_buffer, size_t& out_length, xml_encoding encoding, const void* contents, size_t size, bool is_mutable)
+	bool convert_buffer(char_t*& out_buffer, size_t& out_length, html_encoding encoding, const void* contents, size_t size, bool is_mutable)
 	{
 		// fast path: no conversion required
 		if (encoding == encoding_utf8) return get_mutable_buffer(out_buffer, out_length, contents, size, is_mutable);
@@ -1253,7 +1253,7 @@ namespace
 		// source encoding is utf16
 		if (encoding == encoding_utf16_be || encoding == encoding_utf16_le)
 		{
-			xml_encoding native_encoding = is_little_endian() ? encoding_utf16_le : encoding_utf16_be;
+			html_encoding native_encoding = is_little_endian() ? encoding_utf16_le : encoding_utf16_be;
 
 			return (native_encoding == encoding) ?
 				convert_buffer_utf16(out_buffer, out_length, contents, size, opt_false()) :
@@ -1263,7 +1263,7 @@ namespace
 		// source encoding is utf32
 		if (encoding == encoding_utf32_be || encoding == encoding_utf32_le)
 		{
-			xml_encoding native_encoding = is_little_endian() ? encoding_utf32_le : encoding_utf32_be;
+			html_encoding native_encoding = is_little_endian() ? encoding_utf32_le : encoding_utf32_be;
 
 			return (native_encoding == encoding) ?
 				convert_buffer_utf32(out_buffer, out_length, contents, size, opt_false()) :
@@ -1364,7 +1364,7 @@ namespace
 		if (source_length == 0)
 		{
 			// empty string and null pointer are equivalent, so just deallocate old memory
-			xml_allocator* alloc = reinterpret_cast<xml_memory_page*>(header & xml_memory_page_pointer_mask)->allocator;
+			html_allocator* alloc = reinterpret_cast<html_memory_page*>(header & html_memory_page_pointer_mask)->allocator;
 
 			if (header & header_mask) alloc->deallocate_string(dest);
 			
@@ -1383,7 +1383,7 @@ namespace
 		}
 		else
 		{
-			xml_allocator* alloc = reinterpret_cast<xml_memory_page*>(header & xml_memory_page_pointer_mask)->allocator;
+			html_allocator* alloc = reinterpret_cast<html_memory_page*>(header & html_memory_page_pointer_mask)->allocator;
 
 			// allocate new buffer
 			char_t* buf = alloc->allocate_string(source_length + 1);
@@ -1865,18 +1865,18 @@ namespace
 		}
 	}
 
-	inline xml_parse_result make_parse_result(xml_parse_status status, ptrdiff_t offset = 0)
+	inline html_parse_result make_parse_result(html_parse_status status, ptrdiff_t offset = 0)
 	{
-		xml_parse_result result;
+		html_parse_result result;
 		result.status = status;
 		result.offset = offset;
 
 		return result;
 	}
 
-	struct xml_parser
+	struct html_parser
 	{
-		xml_allocator alloc;
+		html_allocator alloc;
 		char_t* error_offset;
 		jmp_buf error_handler;
 		
@@ -1891,7 +1891,7 @@ namespace
 		#define THROW_ERROR(err, m)	error_offset = m, longjmp(error_handler, err)
 		#define CHECK_ERROR(err, m)	{ if (*s == 0) THROW_ERROR(err, m); }
 		
-		xml_parser(const xml_allocator& alloc): alloc(alloc), error_offset(0)
+		html_parser(const html_allocator& alloc): alloc(alloc), error_offset(0)
 		{
 		}
 
@@ -2001,7 +2001,7 @@ namespace
 			return s;
 		}
 
-		char_t* parse_exclamation(char_t* s, xml_node_struct* cursor, unsigned int optmsk, char_t endch)
+		char_t* parse_exclamation(char_t* s, html_node_struct* cursor, unsigned int optmsk, char_t endch)
 		{
 			// parse node contents, starting with exclamation mark
 			++s;
@@ -2111,10 +2111,10 @@ namespace
 			return s;
 		}
 
-		char_t* parse_question(char_t* s, xml_node_struct*& ref_cursor, unsigned int optmsk, char_t endch)
+		char_t* parse_question(char_t* s, html_node_struct*& ref_cursor, unsigned int optmsk, char_t endch)
 		{
 			// load into registers
-			xml_node_struct* cursor = ref_cursor;
+			html_node_struct* cursor = ref_cursor;
 			char_t ch = 0;
 
 			// parse node contents, starting with question mark
@@ -2204,13 +2204,13 @@ namespace
 			return s;
 		}
 
-		void parse(char_t* s, xml_node_struct* xmldoc, unsigned int optmsk, char_t endch)
+		void parse(char_t* s, html_node_struct* htmldoc, unsigned int optmsk, char_t endch)
 		{
 			strconv_attribute_t strconv_attribute = get_strconv_attribute(optmsk);
 			strconv_pcdata_t strconv_pcdata = get_strconv_pcdata(optmsk);
 			
 			char_t ch = 0;
-			xml_node_struct* cursor = xmldoc;
+			html_node_struct* cursor = htmldoc;
 			char_t* mark = s;
 
 			while (*s != 0)
@@ -2242,7 +2242,7 @@ namespace
 						
 								if (IS_CHARTYPE(*s, ct_start_symbol)) // <... #...
 								{
-									xml_attribute_struct* a = append_attribute_ll(cursor, alloc); // Make space for this attribute.
+									html_attribute_struct* a = append_attribute_ll(cursor, alloc); // Make space for this attribute.
 									if (!a) THROW_ERROR(status_out_of_memory, s);
 
 									a->name = s; // Save the offset.
@@ -2371,7 +2371,7 @@ namespace
 						s = parse_question(s, cursor, optmsk, endch);
 
 						assert(cursor);
-						if ((cursor->header & xml_memory_page_type_mask) + 1 == node_declaration) goto LOC_ATTRIBUTES;
+						if ((cursor->header & html_memory_page_type_mask) + 1 == node_declaration) goto LOC_ATTRIBUTES;
 					}
 					else if (*s == '!') // '<!...'
 					{
@@ -2418,21 +2418,21 @@ namespace
 			}
 
 			// check that last tag is closed
-			if (cursor != xmldoc) THROW_ERROR(status_end_element_mismatch, s);
+			if (cursor != htmldoc) THROW_ERROR(status_end_element_mismatch, s);
 		}
 
-		static xml_parse_result parse(char_t* buffer, size_t length, xml_node_struct* root, unsigned int optmsk)
+		static html_parse_result parse(char_t* buffer, size_t length, html_node_struct* root, unsigned int optmsk)
 		{
-			xml_document_struct* xmldoc = static_cast<xml_document_struct*>(root);
+			html_document_struct* htmldoc = static_cast<html_document_struct*>(root);
 
 			// store buffer for offset_debug
-			xmldoc->buffer = buffer;
+			htmldoc->buffer = buffer;
 
 			// early-out for empty documents
 			if (length == 0) return make_parse_result(status_ok);
 
 			// create parser on stack
-			xml_parser parser(*xmldoc);
+			html_parser parser(*htmldoc);
 
 			// save last character and make buffer zero-terminated (speeds up parsing)
 			char_t endch = buffer[length - 1];
@@ -2443,14 +2443,14 @@ namespace
 
 			if (error == 0)
 			{
-				parser.parse(buffer, xmldoc, optmsk, endch);
+				parser.parse(buffer, htmldoc, optmsk, endch);
 			}
 
-			xml_parse_result result = make_parse_result(static_cast<xml_parse_status>(error), parser.error_offset ? parser.error_offset - buffer : 0);
+			html_parse_result result = make_parse_result(static_cast<html_parse_status>(error), parser.error_offset ? parser.error_offset - buffer : 0);
 			assert(result.offset >= 0 && static_cast<size_t>(result.offset) <= length);
 
 			// update allocator state
-			*static_cast<xml_allocator*>(xmldoc) = parser.alloc;
+			*static_cast<html_allocator*>(htmldoc) = parser.alloc;
 
 			// since we removed last character, we have to handle the only possible false positive
 			if (result && endch == '<')
@@ -2464,7 +2464,7 @@ namespace
 	};
 
 	// Output facilities
-	xml_encoding get_write_native_encoding()
+	html_encoding get_write_native_encoding()
 	{
 	#ifdef PUGIHTML_WCHAR_MODE
 		return get_wchar_encoding();
@@ -2473,7 +2473,7 @@ namespace
 	#endif
 	}
 
-	xml_encoding get_write_encoding(xml_encoding encoding)
+	html_encoding get_write_encoding(html_encoding encoding)
 	{
 		// replace wchar encoding with utf implementation
 		if (encoding == encoding_wchar) return get_wchar_encoding();
@@ -2500,7 +2500,7 @@ namespace
 		return (sizeof(wchar_t) == 2 && (unsigned)(static_cast<uint16_t>(data[length - 1]) - 0xD800) < 0x400) ? length - 1 : length;
 	}
 
-	size_t convert_buffer(char* result, const char_t* data, size_t length, xml_encoding encoding)
+	size_t convert_buffer(char* result, const char_t* data, size_t length, html_encoding encoding)
 	{
 		// only endian-swapping is required
 		if (need_endian_swap_utf(encoding, get_wchar_encoding()))
@@ -2531,7 +2531,7 @@ namespace
 			uint16_t* end = utf_decoder<utf16_writer>::decode_utf32_block(reinterpret_cast<const uint32_t*>(data), length, dest);
 
 			// swap if necessary
-			xml_encoding native_encoding = is_little_endian() ? encoding_utf16_le : encoding_utf16_be;
+			html_encoding native_encoding = is_little_endian() ? encoding_utf16_le : encoding_utf16_be;
 
 			if (native_encoding != encoding) convert_utf_endian_swap(dest, dest, static_cast<size_t>(end - dest));
 
@@ -2547,7 +2547,7 @@ namespace
 			uint32_t* end = utf_decoder<utf32_writer>::decode_utf16_block(reinterpret_cast<const uint16_t*>(data), length, dest);
 
 			// swap if necessary
-			xml_encoding native_encoding = is_little_endian() ? encoding_utf32_le : encoding_utf32_be;
+			html_encoding native_encoding = is_little_endian() ? encoding_utf32_le : encoding_utf32_be;
 
 			if (native_encoding != encoding) convert_utf_endian_swap(dest, dest, static_cast<size_t>(end - dest));
 
@@ -2574,7 +2574,7 @@ namespace
 		return length;
 	}
 
-	size_t convert_buffer(char* result, const char_t* data, size_t length, xml_encoding encoding)
+	size_t convert_buffer(char* result, const char_t* data, size_t length, html_encoding encoding)
 	{
 		if (encoding == encoding_utf16_be || encoding == encoding_utf16_le)
 		{
@@ -2584,7 +2584,7 @@ namespace
 			uint16_t* end = utf_decoder<utf16_writer>::decode_utf8_block(reinterpret_cast<const uint8_t*>(data), length, dest);
 
 			// swap if necessary
-			xml_encoding native_encoding = is_little_endian() ? encoding_utf16_le : encoding_utf16_be;
+			html_encoding native_encoding = is_little_endian() ? encoding_utf16_le : encoding_utf16_be;
 
 			if (native_encoding != encoding) convert_utf_endian_swap(dest, dest, static_cast<size_t>(end - dest));
 
@@ -2599,7 +2599,7 @@ namespace
 			uint32_t* end = utf_decoder<utf32_writer>::decode_utf8_block(reinterpret_cast<const uint8_t*>(data), length, dest);
 
 			// swap if necessary
-			xml_encoding native_encoding = is_little_endian() ? encoding_utf32_le : encoding_utf32_be;
+			html_encoding native_encoding = is_little_endian() ? encoding_utf32_le : encoding_utf32_be;
 
 			if (native_encoding != encoding) convert_utf_endian_swap(dest, dest, static_cast<size_t>(end - dest));
 
@@ -2611,17 +2611,17 @@ namespace
 	}
 #endif
 
-	class xml_buffered_writer
+	class html_buffered_writer
 	{
-		xml_buffered_writer(const xml_buffered_writer&);
-		xml_buffered_writer& operator=(const xml_buffered_writer&);
+		html_buffered_writer(const html_buffered_writer&);
+		html_buffered_writer& operator=(const html_buffered_writer&);
 
 	public:
-		xml_buffered_writer(xml_writer& writer, xml_encoding user_encoding): writer(writer), bufsize(0), encoding(get_write_encoding(user_encoding))
+		html_buffered_writer(html_writer& writer, html_encoding user_encoding): writer(writer), bufsize(0), encoding(get_write_encoding(user_encoding))
 		{
 		}
 
-		~xml_buffered_writer()
+		~html_buffered_writer()
 		{
 			flush();
 		}
@@ -2767,12 +2767,12 @@ namespace
 		char_t buffer[bufcapacity];
 		char scratch[4 * bufcapacity];
 
-		xml_writer& writer;
+		html_writer& writer;
 		size_t bufsize;
-		xml_encoding encoding;
+		html_encoding encoding;
 	};
 
-	void write_bom(xml_writer& writer, xml_encoding encoding)
+	void write_bom(html_writer& writer, html_encoding encoding)
 	{
 		switch (encoding)
 		{
@@ -2801,7 +2801,7 @@ namespace
 		}
 	}
 
-	void text_output_escaped(xml_buffered_writer& writer, const char_t* s, chartypex_t type)
+	void text_output_escaped(html_buffered_writer& writer, const char_t* s, chartypex_t type)
 	{
 		while (*s)
 		{
@@ -2842,7 +2842,7 @@ namespace
 		}
 	}
 
-	void text_output_cdata(xml_buffered_writer& writer, const char_t* s)
+	void text_output_cdata(html_buffered_writer& writer, const char_t* s)
 	{
 		do
 		{
@@ -2864,11 +2864,11 @@ namespace
 		while (*s);
 	}
 
-	void node_output_attributes(xml_buffered_writer& writer, const xml_node& node)
+	void node_output_attributes(html_buffered_writer& writer, const html_node& node)
 	{
 		const char_t* default_name = PUGIHTML_TEXT(":anonymous");
 
-		for (xml_attribute a = node.first_attribute(); a; a = a.next_attribute())
+		for (html_attribute a = node.first_attribute(); a; a = a.next_attribute())
 		{
 			writer.write(' ');
 			writer.write(a.name()[0] ? a.name() : default_name);
@@ -2880,7 +2880,7 @@ namespace
 		}
 	}
 
-	void node_output(xml_buffered_writer& writer, const xml_node& node, const char_t* indent, unsigned int flags, unsigned int depth)
+	void node_output(html_buffered_writer& writer, const html_node& node, const char_t* indent, unsigned int flags, unsigned int depth)
 	{
 		const char_t* default_name = PUGIHTML_TEXT(":anonymous");
 
@@ -2891,7 +2891,7 @@ namespace
 		{
 		case node_document:
 		{
-			for (xml_node n = node.first_child(); n; n = n.next_sibling())
+			for (html_node n = node.first_child(); n; n = n.next_sibling())
 				node_output(writer, n, indent, flags, depth);
 			break;
 		}
@@ -2913,7 +2913,7 @@ namespace
 				{
 					writer.write('>');
 
-					for (xml_node n = node.first_child(); n; n = n.next_sibling())
+					for (html_node n = node.first_child(); n; n = n.next_sibling())
 						node_output(writer, n, indent, flags, depth + 1);
 
 					writer.write('<', '/');
@@ -2940,7 +2940,7 @@ namespace
 			{
 				writer.write('>', '\n');
 				
-				for (xml_node n = node.first_child(); n; n = n.next_sibling())
+				for (html_node n = node.first_child(); n; n = n.next_sibling())
 					node_output(writer, n, indent, flags, depth + 1);
 
 				if ((flags & format_indent) != 0 && (flags & format_raw) == 0)
@@ -3009,11 +3009,11 @@ namespace
 		}
 	}
 
-	inline bool has_declaration(const xml_node& node)
+	inline bool has_declaration(const html_node& node)
 	{
-		for (xml_node child = node.first_child(); child; child = child.next_sibling())
+		for (html_node child = node.first_child(); child; child = child.next_sibling())
 		{
-			xml_node_type type = child.type();
+			html_node_type type = child.type();
 
 			if (type == node_declaration) return true;
 			if (type == node_element) return false;
@@ -3022,7 +3022,7 @@ namespace
 		return false;
 	}
 
-	inline bool allow_insert_child(xml_node_type parent, xml_node_type child)
+	inline bool allow_insert_child(html_node_type parent, html_node_type child)
 	{
 		if (parent != node_document && parent != node_element) return false;
 		if (child == node_document || child == node_null) return false;
@@ -3031,7 +3031,7 @@ namespace
 		return true;
 	}
 
-	void recursive_copy_skip(xml_node& dest, const xml_node& source, const xml_node& skip)
+	void recursive_copy_skip(html_node& dest, const html_node& source, const html_node& skip)
 	{
 		assert(dest.type() == source.type());
 
@@ -3041,14 +3041,14 @@ namespace
 		{
 			dest.set_name(source.name());
 
-			for (xml_attribute a = source.first_attribute(); a; a = a.next_attribute())
+			for (html_attribute a = source.first_attribute(); a; a = a.next_attribute())
 				dest.append_attribute(a.name()).set_value(a.value());
 
-			for (xml_node c = source.first_child(); c; c = c.next_sibling())
+			for (html_node c = source.first_child(); c; c = c.next_sibling())
 			{
 				if (c == skip) continue;
 
-				xml_node cc = dest.append_child(c.type());
+				html_node cc = dest.append_child(c.type());
 				assert(cc);
 
 				recursive_copy_skip(cc, c, skip);
@@ -3073,7 +3073,7 @@ namespace
 		{
 			dest.set_name(source.name());
 
-			for (xml_attribute a = source.first_attribute(); a; a = a.next_attribute())
+			for (html_attribute a = source.first_attribute(); a; a = a.next_attribute())
 				dest.append_attribute(a.name()).set_value(a.value());
 
 			break;
@@ -3085,7 +3085,7 @@ namespace
 	}
 
 	// we need to get length of entire file to load it in memory; the only (relatively) sane way to do it is via seek/tell trick
-	xml_parse_status get_file_size(FILE* file, size_t& out_result)
+	html_parse_status get_file_size(FILE* file, size_t& out_result)
 	{
 	#if defined(_MSC_VER) && _MSC_VER >= 1400
 		// there are 64-bit versions of fseek/ftell, let's use them
@@ -3124,13 +3124,13 @@ namespace
 		return status_ok;
 	}
 
-	xml_parse_result load_file_impl(xml_document& doc, FILE* file, unsigned int options, xml_encoding encoding)
+	html_parse_result load_file_impl(html_document& doc, FILE* file, unsigned int options, html_encoding encoding)
 	{
 		if (!file) return make_parse_result(status_file_not_found);
 
 		// get file size (can result in I/O errors)
 		size_t size = 0;
-		xml_parse_status size_status = get_file_size(file, size);
+		html_parse_status size_status = get_file_size(file, size);
 
 		if (size_status != status_ok)
 		{
@@ -3161,7 +3161,7 @@ namespace
 	}
 
 #ifndef PUGIHTML_NO_STL
-	template <typename T> xml_parse_result load_stream_impl(xml_document& doc, std::basic_istream<T>& stream, unsigned int options, xml_encoding encoding)
+	template <typename T> html_parse_result load_stream_impl(html_document& doc, std::basic_istream<T>& stream, unsigned int options, html_encoding encoding)
 	{
 		// get length of remaining data in stream
 		typename std::basic_istream<T>::pos_type pos = stream.tellg();
@@ -3240,25 +3240,25 @@ namespace
 
 namespace pugi
 {
-	xml_writer_file::xml_writer_file(void* file): file(file)
+	html_writer_file::html_writer_file(void* file): file(file)
 	{
 	}
 
-	void xml_writer_file::write(const void* data, size_t size)
+	void html_writer_file::write(const void* data, size_t size)
 	{
 		fwrite(data, size, 1, static_cast<FILE*>(file));
 	}
 
 #ifndef PUGIHTML_NO_STL
-	xml_writer_stream::xml_writer_stream(std::basic_ostream<char, std::char_traits<char> >& stream): narrow_stream(&stream), wide_stream(0)
+	html_writer_stream::html_writer_stream(std::basic_ostream<char, std::char_traits<char> >& stream): narrow_stream(&stream), wide_stream(0)
 	{
 	}
 
-	xml_writer_stream::xml_writer_stream(std::basic_ostream<wchar_t, std::char_traits<wchar_t> >& stream): narrow_stream(0), wide_stream(&stream)
+	html_writer_stream::html_writer_stream(std::basic_ostream<wchar_t, std::char_traits<wchar_t> >& stream): narrow_stream(0), wide_stream(&stream)
 	{
 	}
 
-	void xml_writer_stream::write(const void* data, size_t size)
+	void html_writer_stream::write(const void* data, size_t size)
 	{
 		if (narrow_stream)
 		{
@@ -3275,88 +3275,88 @@ namespace pugi
 	}
 #endif
 
-	xml_tree_walker::xml_tree_walker(): _depth(0)
+	html_tree_walker::html_tree_walker(): _depth(0)
 	{
 	}
 	
-	xml_tree_walker::~xml_tree_walker()
+	html_tree_walker::~html_tree_walker()
 	{
 	}
 
-	int xml_tree_walker::depth() const
+	int html_tree_walker::depth() const
 	{
 		return _depth;
 	}
 
-	bool xml_tree_walker::begin(xml_node&)
+	bool html_tree_walker::begin(html_node&)
 	{
 		return true;
 	}
 
-	bool xml_tree_walker::end(xml_node&)
+	bool html_tree_walker::end(html_node&)
 	{
 		return true;
 	}
 
-	xml_attribute::xml_attribute(): _attr(0)
+	html_attribute::html_attribute(): _attr(0)
 	{
 	}
 
-	xml_attribute::xml_attribute(xml_attribute_struct* attr): _attr(attr)
+	html_attribute::html_attribute(html_attribute_struct* attr): _attr(attr)
 	{
 	}
 
-	xml_attribute::operator xml_attribute::unspecified_bool_type() const
+	html_attribute::operator html_attribute::unspecified_bool_type() const
 	{
-      	return _attr ? &xml_attribute::_attr : 0;
+      	return _attr ? &html_attribute::_attr : 0;
    	}
 
-   	bool xml_attribute::operator!() const
+   	bool html_attribute::operator!() const
    	{
    		return !_attr;
    	}
 
-	bool xml_attribute::operator==(const xml_attribute& r) const
+	bool html_attribute::operator==(const html_attribute& r) const
 	{
 		return (_attr == r._attr);
 	}
 	
-	bool xml_attribute::operator!=(const xml_attribute& r) const
+	bool html_attribute::operator!=(const html_attribute& r) const
 	{
 		return (_attr != r._attr);
 	}
 
-	bool xml_attribute::operator<(const xml_attribute& r) const
+	bool html_attribute::operator<(const html_attribute& r) const
 	{
 		return (_attr < r._attr);
 	}
 	
-	bool xml_attribute::operator>(const xml_attribute& r) const
+	bool html_attribute::operator>(const html_attribute& r) const
 	{
 		return (_attr > r._attr);
 	}
 	
-	bool xml_attribute::operator<=(const xml_attribute& r) const
+	bool html_attribute::operator<=(const html_attribute& r) const
 	{
 		return (_attr <= r._attr);
 	}
 	
-	bool xml_attribute::operator>=(const xml_attribute& r) const
+	bool html_attribute::operator>=(const html_attribute& r) const
 	{
 		return (_attr >= r._attr);
 	}
 
-   	xml_attribute xml_attribute::next_attribute() const
+   	html_attribute html_attribute::next_attribute() const
    	{
-    	return _attr ? xml_attribute(_attr->next_attribute) : xml_attribute();
+    	return _attr ? html_attribute(_attr->next_attribute) : html_attribute();
    	}
 
-    xml_attribute xml_attribute::previous_attribute() const
+    html_attribute html_attribute::previous_attribute() const
     {
-    	return _attr && _attr->prev_attribute_c->next_attribute ? xml_attribute(_attr->prev_attribute_c) : xml_attribute();
+    	return _attr && _attr->prev_attribute_c->next_attribute ? html_attribute(_attr->prev_attribute_c) : html_attribute();
     }
 
-	int xml_attribute::as_int() const
+	int html_attribute::as_int() const
 	{
 		if (!_attr || !_attr->value) return 0;
 
@@ -3367,7 +3367,7 @@ namespace pugi
 	#endif
 	}
 
-	unsigned int xml_attribute::as_uint() const
+	unsigned int html_attribute::as_uint() const
 	{
 		if (!_attr || !_attr->value) return 0;
 
@@ -3378,7 +3378,7 @@ namespace pugi
 	#endif
 	}
 
-	double xml_attribute::as_double() const
+	double html_attribute::as_double() const
 	{
 		if (!_attr || !_attr->value) return 0;
 
@@ -3389,7 +3389,7 @@ namespace pugi
 	#endif
 	}
 
-	float xml_attribute::as_float() const
+	float html_attribute::as_float() const
 	{
 		if (!_attr || !_attr->value) return 0;
 
@@ -3400,7 +3400,7 @@ namespace pugi
 	#endif
 	}
 
-	bool xml_attribute::as_bool() const
+	bool html_attribute::as_bool() const
 	{
 		if (!_attr || !_attr->value) return false;
 
@@ -3411,76 +3411,76 @@ namespace pugi
 		return (first == '1' || first == 't' || first == 'T' || first == 'y' || first == 'Y');
 	}
 
-	bool xml_attribute::empty() const
+	bool html_attribute::empty() const
 	{
 		return !_attr;
 	}
 
-	const char_t* xml_attribute::name() const
+	const char_t* html_attribute::name() const
 	{
 		return (_attr && _attr->name) ? _attr->name : PUGIHTML_TEXT("");
 	}
 
-	const char_t* xml_attribute::value() const
+	const char_t* html_attribute::value() const
 	{
 		return (_attr && _attr->value) ? _attr->value : PUGIHTML_TEXT("");
 	}
 
-    size_t xml_attribute::hash_value() const
+    size_t html_attribute::hash_value() const
     {
-        return static_cast<size_t>(reinterpret_cast<uintptr_t>(_attr) / sizeof(xml_attribute_struct));
+        return static_cast<size_t>(reinterpret_cast<uintptr_t>(_attr) / sizeof(html_attribute_struct));
     }
 
-	xml_attribute_struct* xml_attribute::internal_object() const
+	html_attribute_struct* html_attribute::internal_object() const
 	{
         return _attr;
 	}
 
-	xml_attribute& xml_attribute::operator=(const char_t* rhs)
+	html_attribute& html_attribute::operator=(const char_t* rhs)
 	{
 		set_value(rhs);
 		return *this;
 	}
 	
-	xml_attribute& xml_attribute::operator=(int rhs)
+	html_attribute& html_attribute::operator=(int rhs)
 	{
 		set_value(rhs);
 		return *this;
 	}
 
-	xml_attribute& xml_attribute::operator=(unsigned int rhs)
+	html_attribute& html_attribute::operator=(unsigned int rhs)
 	{
 		set_value(rhs);
 		return *this;
 	}
 
-	xml_attribute& xml_attribute::operator=(double rhs)
+	html_attribute& html_attribute::operator=(double rhs)
 	{
 		set_value(rhs);
 		return *this;
 	}
 	
-	xml_attribute& xml_attribute::operator=(bool rhs)
+	html_attribute& html_attribute::operator=(bool rhs)
 	{
 		set_value(rhs);
 		return *this;
 	}
 
-	bool xml_attribute::set_name(const char_t* rhs)
+	bool html_attribute::set_name(const char_t* rhs)
 	{
 		if (!_attr) return false;
 		
-		return strcpy_insitu(_attr->name, _attr->header, xml_memory_page_name_allocated_mask, rhs);
+		return strcpy_insitu(_attr->name, _attr->header, html_memory_page_name_allocated_mask, rhs);
 	}
 		
-	bool xml_attribute::set_value(const char_t* rhs)
+	bool html_attribute::set_value(const char_t* rhs)
 	{
 		if (!_attr) return false;
 
-		return strcpy_insitu(_attr->value, _attr->header, xml_memory_page_value_allocated_mask, rhs);
+		return strcpy_insitu(_attr->value, _attr->header, html_memory_page_value_allocated_mask, rhs);
 	}
 
-	bool xml_attribute::set_value(int rhs)
+	bool html_attribute::set_value(int rhs)
 	{
 		char buf[128];
 		sprintf(buf, "%d", rhs);
@@ -3495,7 +3495,7 @@ namespace pugi
 	#endif
 	}
 
-	bool xml_attribute::set_value(unsigned int rhs)
+	bool html_attribute::set_value(unsigned int rhs)
 	{
 		char buf[128];
 		sprintf(buf, "%u", rhs);
@@ -3510,7 +3510,7 @@ namespace pugi
 	#endif
 	}
 
-	bool xml_attribute::set_value(double rhs)
+	bool html_attribute::set_value(double rhs)
 	{
 		char buf[128];
 		sprintf(buf, "%g", rhs);
@@ -3525,189 +3525,189 @@ namespace pugi
 	#endif
 	}
 	
-	bool xml_attribute::set_value(bool rhs)
+	bool html_attribute::set_value(bool rhs)
 	{
 		return set_value(rhs ? PUGIHTML_TEXT("true") : PUGIHTML_TEXT("false"));
 	}
 
 #ifdef __BORLANDC__
-	bool operator&&(const xml_attribute& lhs, bool rhs)
+	bool operator&&(const html_attribute& lhs, bool rhs)
 	{
 		return (bool)lhs && rhs;
 	}
 
-	bool operator||(const xml_attribute& lhs, bool rhs)
+	bool operator||(const html_attribute& lhs, bool rhs)
 	{
 		return (bool)lhs || rhs;
 	}
 #endif
 
-	xml_node::xml_node(): _root(0)
+	html_node::html_node(): _root(0)
 	{
 	}
 
-	xml_node::xml_node(xml_node_struct* p): _root(p)
+	html_node::html_node(html_node_struct* p): _root(p)
 	{
 	}
 	
-	xml_node::operator xml_node::unspecified_bool_type() const
+	html_node::operator html_node::unspecified_bool_type() const
 	{
-      	return _root ? &xml_node::_root : 0;
+      	return _root ? &html_node::_root : 0;
    	}
 
-   	bool xml_node::operator!() const
+   	bool html_node::operator!() const
    	{
    		return !_root;
    	}
 
-	xml_node::iterator xml_node::begin() const
+	html_node::iterator html_node::begin() const
 	{
 		return iterator(_root ? _root->first_child : 0, _root);
 	}
 
-	xml_node::iterator xml_node::end() const
+	html_node::iterator html_node::end() const
 	{
 		return iterator(0, _root);
 	}
 	
-	xml_node::attribute_iterator xml_node::attributes_begin() const
+	html_node::attribute_iterator html_node::attributes_begin() const
 	{
 		return attribute_iterator(_root ? _root->first_attribute : 0, _root);
 	}
 
-	xml_node::attribute_iterator xml_node::attributes_end() const
+	html_node::attribute_iterator html_node::attributes_end() const
 	{
 		return attribute_iterator(0, _root);
 	}
 
-	bool xml_node::operator==(const xml_node& r) const
+	bool html_node::operator==(const html_node& r) const
 	{
 		return (_root == r._root);
 	}
 
-	bool xml_node::operator!=(const xml_node& r) const
+	bool html_node::operator!=(const html_node& r) const
 	{
 		return (_root != r._root);
 	}
 
-	bool xml_node::operator<(const xml_node& r) const
+	bool html_node::operator<(const html_node& r) const
 	{
 		return (_root < r._root);
 	}
 	
-	bool xml_node::operator>(const xml_node& r) const
+	bool html_node::operator>(const html_node& r) const
 	{
 		return (_root > r._root);
 	}
 	
-	bool xml_node::operator<=(const xml_node& r) const
+	bool html_node::operator<=(const html_node& r) const
 	{
 		return (_root <= r._root);
 	}
 	
-	bool xml_node::operator>=(const xml_node& r) const
+	bool html_node::operator>=(const html_node& r) const
 	{
 		return (_root >= r._root);
 	}
 
-	bool xml_node::empty() const
+	bool html_node::empty() const
 	{
 		return !_root;
 	}
 	
-	const char_t* xml_node::name() const
+	const char_t* html_node::name() const
 	{
 		return (_root && _root->name) ? _root->name : PUGIHTML_TEXT("");
 	}
 
-	xml_node_type xml_node::type() const
+	html_node_type html_node::type() const
 	{
-		return _root ? static_cast<xml_node_type>((_root->header & xml_memory_page_type_mask) + 1) : node_null;
+		return _root ? static_cast<html_node_type>((_root->header & html_memory_page_type_mask) + 1) : node_null;
 	}
 	
-	const char_t* xml_node::value() const
+	const char_t* html_node::value() const
 	{
 		return (_root && _root->value) ? _root->value : PUGIHTML_TEXT("");
 	}
 	
-	xml_node xml_node::child(const char_t* name) const
+	html_node html_node::child(const char_t* name) const
 	{
-		if (!_root) return xml_node();
+		if (!_root) return html_node();
 
-		for (xml_node_struct* i = _root->first_child; i; i = i->next_sibling)
-			if (i->name && strequal(name, i->name)) return xml_node(i);
+		for (html_node_struct* i = _root->first_child; i; i = i->next_sibling)
+			if (i->name && strequal(name, i->name)) return html_node(i);
 
-		return xml_node();
+		return html_node();
 	}
 
-	xml_attribute xml_node::attribute(const char_t* name) const
+	html_attribute html_node::attribute(const char_t* name) const
 	{
-		if (!_root) return xml_attribute();
+		if (!_root) return html_attribute();
 
-		for (xml_attribute_struct* i = _root->first_attribute; i; i = i->next_attribute)
+		for (html_attribute_struct* i = _root->first_attribute; i; i = i->next_attribute)
 			if (i->name && strequal(name, i->name))
-				return xml_attribute(i);
+				return html_attribute(i);
 		
-		return xml_attribute();
+		return html_attribute();
 	}
 	
-	xml_node xml_node::next_sibling(const char_t* name) const
+	html_node html_node::next_sibling(const char_t* name) const
 	{
-		if (!_root) return xml_node();
+		if (!_root) return html_node();
 		
-		for (xml_node_struct* i = _root->next_sibling; i; i = i->next_sibling)
-			if (i->name && strequal(name, i->name)) return xml_node(i);
+		for (html_node_struct* i = _root->next_sibling; i; i = i->next_sibling)
+			if (i->name && strequal(name, i->name)) return html_node(i);
 
-		return xml_node();
+		return html_node();
 	}
 
-	xml_node xml_node::next_sibling() const
+	html_node html_node::next_sibling() const
 	{
-		if (!_root) return xml_node();
+		if (!_root) return html_node();
 		
-		if (_root->next_sibling) return xml_node(_root->next_sibling);
-		else return xml_node();
+		if (_root->next_sibling) return html_node(_root->next_sibling);
+		else return html_node();
 	}
 
-	xml_node xml_node::previous_sibling(const char_t* name) const
+	html_node html_node::previous_sibling(const char_t* name) const
 	{
-		if (!_root) return xml_node();
+		if (!_root) return html_node();
 		
-		for (xml_node_struct* i = _root->prev_sibling_c; i->next_sibling; i = i->prev_sibling_c)
-			if (i->name && strequal(name, i->name)) return xml_node(i);
+		for (html_node_struct* i = _root->prev_sibling_c; i->next_sibling; i = i->prev_sibling_c)
+			if (i->name && strequal(name, i->name)) return html_node(i);
 
-		return xml_node();
+		return html_node();
 	}
 
-	xml_node xml_node::previous_sibling() const
+	html_node html_node::previous_sibling() const
 	{
-		if (!_root) return xml_node();
+		if (!_root) return html_node();
 		
-		if (_root->prev_sibling_c->next_sibling) return xml_node(_root->prev_sibling_c);
-		else return xml_node();
+		if (_root->prev_sibling_c->next_sibling) return html_node(_root->prev_sibling_c);
+		else return html_node();
 	}
 
-	xml_node xml_node::parent() const
+	html_node html_node::parent() const
 	{
-		return _root ? xml_node(_root->parent) : xml_node();
+		return _root ? html_node(_root->parent) : html_node();
 	}
 
-	xml_node xml_node::root() const
+	html_node html_node::root() const
 	{
-		if (!_root) return xml_node();
+		if (!_root) return html_node();
 
-		xml_memory_page* page = reinterpret_cast<xml_memory_page*>(_root->header & xml_memory_page_pointer_mask);
+		html_memory_page* page = reinterpret_cast<html_memory_page*>(_root->header & html_memory_page_pointer_mask);
 
-		return xml_node(static_cast<xml_document_struct*>(page->allocator));
+		return html_node(static_cast<html_document_struct*>(page->allocator));
 	}
 
-	const char_t* xml_node::child_value() const
+	const char_t* html_node::child_value() const
 	{
 		if (!_root) return PUGIHTML_TEXT("");
 		
-		for (xml_node_struct* i = _root->first_child; i; i = i->next_sibling)
+		for (html_node_struct* i = _root->first_child; i; i = i->next_sibling)
 		{
-			xml_node_type type = static_cast<xml_node_type>((i->header & xml_memory_page_type_mask) + 1);
+			html_node_type type = static_cast<html_node_type>((i->header & html_memory_page_type_mask) + 1);
 
 			if (i->value && (type == node_pcdata || type == node_cdata))
 				return i->value;
@@ -3716,46 +3716,46 @@ namespace pugi
 		return PUGIHTML_TEXT("");
 	}
 
-	const char_t* xml_node::child_value(const char_t* name) const
+	const char_t* html_node::child_value(const char_t* name) const
 	{
 		return child(name).child_value();
 	}
 
-	xml_attribute xml_node::first_attribute() const
+	html_attribute html_node::first_attribute() const
 	{
-		return _root ? xml_attribute(_root->first_attribute) : xml_attribute();
+		return _root ? html_attribute(_root->first_attribute) : html_attribute();
 	}
 
-	xml_attribute xml_node::last_attribute() const
+	html_attribute html_node::last_attribute() const
 	{
-		return _root && _root->first_attribute ? xml_attribute(_root->first_attribute->prev_attribute_c) : xml_attribute();
+		return _root && _root->first_attribute ? html_attribute(_root->first_attribute->prev_attribute_c) : html_attribute();
 	}
 
-	xml_node xml_node::first_child() const
+	html_node html_node::first_child() const
 	{
-		return _root ? xml_node(_root->first_child) : xml_node();
+		return _root ? html_node(_root->first_child) : html_node();
 	}
 
-	xml_node xml_node::last_child() const
+	html_node html_node::last_child() const
 	{
-		return _root && _root->first_child ? xml_node(_root->first_child->prev_sibling_c) : xml_node();
+		return _root && _root->first_child ? html_node(_root->first_child->prev_sibling_c) : html_node();
 	}
 
-	bool xml_node::set_name(const char_t* rhs)
+	bool html_node::set_name(const char_t* rhs)
 	{
 		switch (type())
 		{
 		case node_pi:
 		case node_declaration:
 		case node_element:
-			return strcpy_insitu(_root->name, _root->header, xml_memory_page_name_allocated_mask, rhs);
+			return strcpy_insitu(_root->name, _root->header, html_memory_page_name_allocated_mask, rhs);
 
 		default:
 			return false;
 		}
 	}
 		
-	bool xml_node::set_value(const char_t* rhs)
+	bool html_node::set_value(const char_t* rhs)
 	{
 		switch (type())
 		{
@@ -3764,33 +3764,33 @@ namespace pugi
 		case node_pcdata:
 		case node_comment:
         case node_doctype:
-			return strcpy_insitu(_root->value, _root->header, xml_memory_page_value_allocated_mask, rhs);
+			return strcpy_insitu(_root->value, _root->header, html_memory_page_value_allocated_mask, rhs);
 
 		default:
 			return false;
 		}
 	}
 
-	xml_attribute xml_node::append_attribute(const char_t* name)
+	html_attribute html_node::append_attribute(const char_t* name)
 	{
-		if (type() != node_element && type() != node_declaration) return xml_attribute();
+		if (type() != node_element && type() != node_declaration) return html_attribute();
 		
-		xml_attribute a(append_attribute_ll(_root, get_allocator(_root)));
+		html_attribute a(append_attribute_ll(_root, get_allocator(_root)));
 		a.set_name(name);
 		
 		return a;
 	}
 
-	xml_attribute xml_node::prepend_attribute(const char_t* name)
+	html_attribute html_node::prepend_attribute(const char_t* name)
 	{
-		if (type() != node_element && type() != node_declaration) return xml_attribute();
+		if (type() != node_element && type() != node_declaration) return html_attribute();
 		
-		xml_attribute a(allocate_attribute(get_allocator(_root)));
-		if (!a) return xml_attribute();
+		html_attribute a(allocate_attribute(get_allocator(_root)));
+		if (!a) return html_attribute();
 
 		a.set_name(name);
 		
-        xml_attribute_struct* head = _root->first_attribute;
+        html_attribute_struct* head = _root->first_attribute;
 
 		if (head)
         {
@@ -3806,19 +3806,19 @@ namespace pugi
 		return a;
 	}
 
-	xml_attribute xml_node::insert_attribute_before(const char_t* name, const xml_attribute& attr)
+	html_attribute html_node::insert_attribute_before(const char_t* name, const html_attribute& attr)
 	{
-		if ((type() != node_element && type() != node_declaration) || attr.empty()) return xml_attribute();
+		if ((type() != node_element && type() != node_declaration) || attr.empty()) return html_attribute();
 		
 		// check that attribute belongs to *this
-		xml_attribute_struct* cur = attr._attr;
+		html_attribute_struct* cur = attr._attr;
 
 		while (cur->prev_attribute_c->next_attribute) cur = cur->prev_attribute_c;
 
-		if (cur != _root->first_attribute) return xml_attribute();
+		if (cur != _root->first_attribute) return html_attribute();
 
-		xml_attribute a(allocate_attribute(get_allocator(_root)));
-		if (!a) return xml_attribute();
+		html_attribute a(allocate_attribute(get_allocator(_root)));
+		if (!a) return html_attribute();
 
 		a.set_name(name);
 
@@ -3834,19 +3834,19 @@ namespace pugi
 		return a;
 	}
 
-	xml_attribute xml_node::insert_attribute_after(const char_t* name, const xml_attribute& attr)
+	html_attribute html_node::insert_attribute_after(const char_t* name, const html_attribute& attr)
 	{
-		if ((type() != node_element && type() != node_declaration) || attr.empty()) return xml_attribute();
+		if ((type() != node_element && type() != node_declaration) || attr.empty()) return html_attribute();
 		
 		// check that attribute belongs to *this
-		xml_attribute_struct* cur = attr._attr;
+		html_attribute_struct* cur = attr._attr;
 
 		while (cur->prev_attribute_c->next_attribute) cur = cur->prev_attribute_c;
 
-		if (cur != _root->first_attribute) return xml_attribute();
+		if (cur != _root->first_attribute) return html_attribute();
 
-		xml_attribute a(allocate_attribute(get_allocator(_root)));
-		if (!a) return xml_attribute();
+		html_attribute a(allocate_attribute(get_allocator(_root)));
+		if (!a) return html_attribute();
 
 		a.set_name(name);
 
@@ -3862,67 +3862,67 @@ namespace pugi
 		return a;
 	}
 
-	xml_attribute xml_node::append_copy(const xml_attribute& proto)
+	html_attribute html_node::append_copy(const html_attribute& proto)
 	{
-		if (!proto) return xml_attribute();
+		if (!proto) return html_attribute();
 
-		xml_attribute result = append_attribute(proto.name());
+		html_attribute result = append_attribute(proto.name());
 		result.set_value(proto.value());
 
 		return result;
 	}
 
-	xml_attribute xml_node::prepend_copy(const xml_attribute& proto)
+	html_attribute html_node::prepend_copy(const html_attribute& proto)
 	{
-		if (!proto) return xml_attribute();
+		if (!proto) return html_attribute();
 
-		xml_attribute result = prepend_attribute(proto.name());
+		html_attribute result = prepend_attribute(proto.name());
 		result.set_value(proto.value());
 
 		return result;
 	}
 
-	xml_attribute xml_node::insert_copy_after(const xml_attribute& proto, const xml_attribute& attr)
+	html_attribute html_node::insert_copy_after(const html_attribute& proto, const html_attribute& attr)
 	{
-		if (!proto) return xml_attribute();
+		if (!proto) return html_attribute();
 
-		xml_attribute result = insert_attribute_after(proto.name(), attr);
+		html_attribute result = insert_attribute_after(proto.name(), attr);
 		result.set_value(proto.value());
 
 		return result;
 	}
 
-	xml_attribute xml_node::insert_copy_before(const xml_attribute& proto, const xml_attribute& attr)
+	html_attribute html_node::insert_copy_before(const html_attribute& proto, const html_attribute& attr)
 	{
-		if (!proto) return xml_attribute();
+		if (!proto) return html_attribute();
 
-		xml_attribute result = insert_attribute_before(proto.name(), attr);
+		html_attribute result = insert_attribute_before(proto.name(), attr);
 		result.set_value(proto.value());
 
 		return result;
 	}
 
-	xml_node xml_node::append_child(xml_node_type type)
+	html_node html_node::append_child(html_node_type type)
 	{
-		if (!allow_insert_child(this->type(), type)) return xml_node();
+		if (!allow_insert_child(this->type(), type)) return html_node();
 		
-		xml_node n(append_node(_root, get_allocator(_root), type));
+		html_node n(append_node(_root, get_allocator(_root), type));
 
-		if (type == node_declaration) n.set_name(PUGIHTML_TEXT("xml"));
+		if (type == node_declaration) n.set_name(PUGIHTML_TEXT("html"));
 
 		return n;
 	}
 
-	xml_node xml_node::prepend_child(xml_node_type type)
+	html_node html_node::prepend_child(html_node_type type)
 	{
-		if (!allow_insert_child(this->type(), type)) return xml_node();
+		if (!allow_insert_child(this->type(), type)) return html_node();
 		
-		xml_node n(allocate_node(get_allocator(_root), type));
-		if (!n) return xml_node();
+		html_node n(allocate_node(get_allocator(_root), type));
+		if (!n) return html_node();
 
         n._root->parent = _root;
 
-        xml_node_struct* head = _root->first_child;
+        html_node_struct* head = _root->first_child;
 
 		if (head)
         {
@@ -3935,18 +3935,18 @@ namespace pugi
 		n._root->next_sibling = head;
         _root->first_child = n._root;
 				
-		if (type == node_declaration) n.set_name(PUGIHTML_TEXT("xml"));
+		if (type == node_declaration) n.set_name(PUGIHTML_TEXT("html"));
 
 		return n;
 	}
 
-	xml_node xml_node::insert_child_before(xml_node_type type, const xml_node& node)
+	html_node html_node::insert_child_before(html_node_type type, const html_node& node)
 	{
-		if (!allow_insert_child(this->type(), type)) return xml_node();
-		if (!node._root || node._root->parent != _root) return xml_node();
+		if (!allow_insert_child(this->type(), type)) return html_node();
+		if (!node._root || node._root->parent != _root) return html_node();
 	
-		xml_node n(allocate_node(get_allocator(_root), type));
-		if (!n) return xml_node();
+		html_node n(allocate_node(get_allocator(_root), type));
+		if (!n) return html_node();
 
 		n._root->parent = _root;
 		
@@ -3959,18 +3959,18 @@ namespace pugi
 		n._root->next_sibling = node._root;
 		node._root->prev_sibling_c = n._root;
 
-		if (type == node_declaration) n.set_name(PUGIHTML_TEXT("xml"));
+		if (type == node_declaration) n.set_name(PUGIHTML_TEXT("html"));
 
 		return n;
 	}
 
-	xml_node xml_node::insert_child_after(xml_node_type type, const xml_node& node)
+	html_node html_node::insert_child_after(html_node_type type, const html_node& node)
 	{
-		if (!allow_insert_child(this->type(), type)) return xml_node();
-		if (!node._root || node._root->parent != _root) return xml_node();
+		if (!allow_insert_child(this->type(), type)) return html_node();
+		if (!node._root || node._root->parent != _root) return html_node();
 	
-		xml_node n(allocate_node(get_allocator(_root), type));
-		if (!n) return xml_node();
+		html_node n(allocate_node(get_allocator(_root), type));
+		if (!n) return html_node();
 
 		n._root->parent = _root;
 	
@@ -3983,94 +3983,94 @@ namespace pugi
 		n._root->prev_sibling_c = node._root;
 		node._root->next_sibling = n._root;
 
-		if (type == node_declaration) n.set_name(PUGIHTML_TEXT("xml"));
+		if (type == node_declaration) n.set_name(PUGIHTML_TEXT("html"));
 
 		return n;
 	}
 
-    xml_node xml_node::append_child(const char_t* name)
+    html_node html_node::append_child(const char_t* name)
     {
-        xml_node result = append_child(node_element);
+        html_node result = append_child(node_element);
 
         result.set_name(name);
 
         return result;
     }
 
-    xml_node xml_node::prepend_child(const char_t* name)
+    html_node html_node::prepend_child(const char_t* name)
     {
-        xml_node result = prepend_child(node_element);
+        html_node result = prepend_child(node_element);
 
         result.set_name(name);
 
         return result;
     }
 
-    xml_node xml_node::insert_child_after(const char_t* name, const xml_node& node)
+    html_node html_node::insert_child_after(const char_t* name, const html_node& node)
     {
-        xml_node result = insert_child_after(node_element, node);
+        html_node result = insert_child_after(node_element, node);
 
         result.set_name(name);
 
         return result;
     }
 
-    xml_node xml_node::insert_child_before(const char_t* name, const xml_node& node)
+    html_node html_node::insert_child_before(const char_t* name, const html_node& node)
     {
-        xml_node result = insert_child_before(node_element, node);
+        html_node result = insert_child_before(node_element, node);
 
         result.set_name(name);
 
         return result;
     }
 
-	xml_node xml_node::append_copy(const xml_node& proto)
+	html_node html_node::append_copy(const html_node& proto)
 	{
-		xml_node result = append_child(proto.type());
+		html_node result = append_child(proto.type());
 
 		if (result) recursive_copy_skip(result, proto, result);
 
 		return result;
 	}
 
-	xml_node xml_node::prepend_copy(const xml_node& proto)
+	html_node html_node::prepend_copy(const html_node& proto)
 	{
-		xml_node result = prepend_child(proto.type());
+		html_node result = prepend_child(proto.type());
 
 		if (result) recursive_copy_skip(result, proto, result);
 
 		return result;
 	}
 
-	xml_node xml_node::insert_copy_after(const xml_node& proto, const xml_node& node)
+	html_node html_node::insert_copy_after(const html_node& proto, const html_node& node)
 	{
-		xml_node result = insert_child_after(proto.type(), node);
+		html_node result = insert_child_after(proto.type(), node);
 
 		if (result) recursive_copy_skip(result, proto, result);
 
 		return result;
 	}
 
-	xml_node xml_node::insert_copy_before(const xml_node& proto, const xml_node& node)
+	html_node html_node::insert_copy_before(const html_node& proto, const html_node& node)
 	{
-		xml_node result = insert_child_before(proto.type(), node);
+		html_node result = insert_child_before(proto.type(), node);
 
 		if (result) recursive_copy_skip(result, proto, result);
 
 		return result;
 	}
 
-	bool xml_node::remove_attribute(const char_t* name)
+	bool html_node::remove_attribute(const char_t* name)
 	{
 		return remove_attribute(attribute(name));
 	}
 
-	bool xml_node::remove_attribute(const xml_attribute& a)
+	bool html_node::remove_attribute(const html_attribute& a)
 	{
 		if (!_root || !a._attr) return false;
 
 		// check that attribute belongs to *this
-		xml_attribute_struct* attr = a._attr;
+		html_attribute_struct* attr = a._attr;
 
 		while (attr->prev_attribute_c->next_attribute) attr = attr->prev_attribute_c;
 
@@ -4087,12 +4087,12 @@ namespace pugi
 		return true;
 	}
 
-	bool xml_node::remove_child(const char_t* name)
+	bool html_node::remove_child(const char_t* name)
 	{
 		return remove_child(child(name));
 	}
 
-	bool xml_node::remove_child(const xml_node& n)
+	bool html_node::remove_child(const html_node& n)
 	{
 		if (!_root || !n._root || n._root->parent != _root) return false;
 
@@ -4107,39 +4107,39 @@ namespace pugi
 		return true;
 	}
 
-	xml_node xml_node::find_child_by_attribute(const char_t* name, const char_t* attr_name, const char_t* attr_value) const
+	html_node html_node::find_child_by_attribute(const char_t* name, const char_t* attr_name, const char_t* attr_value) const
 	{
-		if (!_root) return xml_node();
+		if (!_root) return html_node();
 		
-		for (xml_node_struct* i = _root->first_child; i; i = i->next_sibling)
+		for (html_node_struct* i = _root->first_child; i; i = i->next_sibling)
 			if (i->name && strequal(name, i->name))
 			{
-				for (xml_attribute_struct* a = i->first_attribute; a; a = a->next_attribute)
+				for (html_attribute_struct* a = i->first_attribute; a; a = a->next_attribute)
 					if (strequal(attr_name, a->name) && strequal(attr_value, a->value))
-						return xml_node(i);
+						return html_node(i);
 			}
 
-		return xml_node();
+		return html_node();
 	}
 
-	xml_node xml_node::find_child_by_attribute(const char_t* attr_name, const char_t* attr_value) const
+	html_node html_node::find_child_by_attribute(const char_t* attr_name, const char_t* attr_value) const
 	{
-		if (!_root) return xml_node();
+		if (!_root) return html_node();
 		
-		for (xml_node_struct* i = _root->first_child; i; i = i->next_sibling)
-			for (xml_attribute_struct* a = i->first_attribute; a; a = a->next_attribute)
+		for (html_node_struct* i = _root->first_child; i; i = i->next_sibling)
+			for (html_attribute_struct* a = i->first_attribute; a; a = a->next_attribute)
 				if (strequal(attr_name, a->name) && strequal(attr_value, a->value))
-					return xml_node(i);
+					return html_node(i);
 
-		return xml_node();
+		return html_node();
 	}
 
 #ifndef PUGIHTML_NO_STL
-	string_t xml_node::path(char_t delimiter) const
+	string_t html_node::path(char_t delimiter) const
 	{
 		string_t path;
 
-		xml_node cursor = *this; // Make a copy.
+		html_node cursor = *this; // Make a copy.
 		
 		path = cursor.name();
 
@@ -4157,9 +4157,9 @@ namespace pugi
 	}
 #endif
 
-	xml_node xml_node::first_element_by_path(const char_t* path, char_t delimiter) const
+	html_node html_node::first_element_by_path(const char_t* path, char_t delimiter) const
 	{
-		xml_node found = *this; // Current search context.
+		html_node found = *this; // Current search context.
 
 		if (!_root || !path || !path[0]) return found;
 
@@ -4190,28 +4190,28 @@ namespace pugi
 			return found.parent().first_element_by_path(next_segment, delimiter);
 		else
 		{
-			for (xml_node_struct* j = found._root->first_child; j; j = j->next_sibling)
+			for (html_node_struct* j = found._root->first_child; j; j = j->next_sibling)
 			{
 				if (j->name && strequalrange(j->name, path_segment, static_cast<size_t>(path_segment_end - path_segment)))
 				{
-					xml_node subsearch = xml_node(j).first_element_by_path(next_segment, delimiter);
+					html_node subsearch = html_node(j).first_element_by_path(next_segment, delimiter);
 
 					if (subsearch) return subsearch;
 				}
 			}
 
-			return xml_node();
+			return html_node();
 		}
 	}
 
-	bool xml_node::traverse(xml_tree_walker& walker)
+	bool html_node::traverse(html_tree_walker& walker)
 	{
 		walker._depth = -1;
 		
-		xml_node arg_begin = *this;
+		html_node arg_begin = *this;
 		if (!walker.begin(arg_begin)) return false;
 
-		xml_node cur = first_child();
+		html_node cur = first_child();
 				
 		if (cur)
 		{
@@ -4219,7 +4219,7 @@ namespace pugi
 
 			do 
 			{
-				xml_node arg_for_each = cur;
+				html_node arg_for_each = cur;
 				if (!walker.for_each(arg_for_each))
 					return false;
 						
@@ -4248,52 +4248,52 @@ namespace pugi
 
 		assert(walker._depth == -1);
 
-		xml_node arg_end = *this;
+		html_node arg_end = *this;
 		return walker.end(arg_end);
 	}
 
-    size_t xml_node::hash_value() const
+    size_t html_node::hash_value() const
     {
-        return static_cast<size_t>(reinterpret_cast<uintptr_t>(_root) / sizeof(xml_node_struct));
+        return static_cast<size_t>(reinterpret_cast<uintptr_t>(_root) / sizeof(html_node_struct));
     }
 
-	xml_node_struct* xml_node::internal_object() const
+	html_node_struct* html_node::internal_object() const
 	{
         return _root;
 	}
 
-	void xml_node::print(xml_writer& writer, const char_t* indent, unsigned int flags, xml_encoding encoding, unsigned int depth) const
+	void html_node::print(html_writer& writer, const char_t* indent, unsigned int flags, html_encoding encoding, unsigned int depth) const
 	{
 		if (!_root) return;
 
-		xml_buffered_writer buffered_writer(writer, encoding);
+		html_buffered_writer buffered_writer(writer, encoding);
 
 		node_output(buffered_writer, *this, indent, flags, depth);
 	}
 
 #ifndef PUGIHTML_NO_STL
-	void xml_node::print(std::basic_ostream<char, std::char_traits<char> >& stream, const char_t* indent, unsigned int flags, xml_encoding encoding, unsigned int depth) const
+	void html_node::print(std::basic_ostream<char, std::char_traits<char> >& stream, const char_t* indent, unsigned int flags, html_encoding encoding, unsigned int depth) const
 	{
-		xml_writer_stream writer(stream);
+		html_writer_stream writer(stream);
 
 		print(writer, indent, flags, encoding, depth);
 	}
 
-	void xml_node::print(std::basic_ostream<wchar_t, std::char_traits<wchar_t> >& stream, const char_t* indent, unsigned int flags, unsigned int depth) const
+	void html_node::print(std::basic_ostream<wchar_t, std::char_traits<wchar_t> >& stream, const char_t* indent, unsigned int flags, unsigned int depth) const
 	{
-		xml_writer_stream writer(stream);
+		html_writer_stream writer(stream);
 
 		print(writer, indent, flags, encoding_wchar, depth);
 	}
 #endif
 
-	ptrdiff_t xml_node::offset_debug() const
+	ptrdiff_t html_node::offset_debug() const
 	{
-		xml_node_struct* r = root()._root;
+		html_node_struct* r = root()._root;
 
 		if (!r) return -1;
 
-		const char_t* buffer = static_cast<xml_document_struct*>(r)->buffer;
+		const char_t* buffer = static_cast<html_document_struct*>(r)->buffer;
 
 		if (!buffer) return -1;
 
@@ -4305,13 +4305,13 @@ namespace pugi
 		case node_element:
 		case node_declaration:
 		case node_pi:
-			return (_root->header & xml_memory_page_name_allocated_mask) ? -1 : _root->name - buffer;
+			return (_root->header & html_memory_page_name_allocated_mask) ? -1 : _root->name - buffer;
 
 		case node_pcdata:
 		case node_cdata:
 		case node_comment:
 		case node_doctype:
-			return (_root->header & xml_memory_page_value_allocated_mask) ? -1 : _root->value - buffer;
+			return (_root->header & html_memory_page_value_allocated_mask) ? -1 : _root->value - buffer;
 
 		default:
 			return -1;
@@ -4319,149 +4319,149 @@ namespace pugi
 	}
 
 #ifdef __BORLANDC__
-	bool operator&&(const xml_node& lhs, bool rhs)
+	bool operator&&(const html_node& lhs, bool rhs)
 	{
 		return (bool)lhs && rhs;
 	}
 
-	bool operator||(const xml_node& lhs, bool rhs)
+	bool operator||(const html_node& lhs, bool rhs)
 	{
 		return (bool)lhs || rhs;
 	}
 #endif
 
-	xml_node_iterator::xml_node_iterator()
+	html_node_iterator::html_node_iterator()
 	{
 	}
 
-	xml_node_iterator::xml_node_iterator(const xml_node& node): _wrap(node), _parent(node.parent())
+	html_node_iterator::html_node_iterator(const html_node& node): _wrap(node), _parent(node.parent())
 	{
 	}
 
-	xml_node_iterator::xml_node_iterator(xml_node_struct* ref, xml_node_struct* parent): _wrap(ref), _parent(parent)
+	html_node_iterator::html_node_iterator(html_node_struct* ref, html_node_struct* parent): _wrap(ref), _parent(parent)
 	{
 	}
 
-	bool xml_node_iterator::operator==(const xml_node_iterator& rhs) const
+	bool html_node_iterator::operator==(const html_node_iterator& rhs) const
 	{
 		return _wrap._root == rhs._wrap._root && _parent._root == rhs._parent._root;
 	}
 	
-	bool xml_node_iterator::operator!=(const xml_node_iterator& rhs) const
+	bool html_node_iterator::operator!=(const html_node_iterator& rhs) const
 	{
 		return _wrap._root != rhs._wrap._root || _parent._root != rhs._parent._root;
 	}
 
-	xml_node& xml_node_iterator::operator*()
+	html_node& html_node_iterator::operator*()
 	{
 		assert(_wrap._root);
 		return _wrap;
 	}
 
-	xml_node* xml_node_iterator::operator->()
+	html_node* html_node_iterator::operator->()
 	{
 		assert(_wrap._root);
 		return &_wrap;
 	}
 
-	const xml_node_iterator& xml_node_iterator::operator++()
+	const html_node_iterator& html_node_iterator::operator++()
 	{
 		assert(_wrap._root);
 		_wrap._root = _wrap._root->next_sibling;
 		return *this;
 	}
 
-	xml_node_iterator xml_node_iterator::operator++(int)
+	html_node_iterator html_node_iterator::operator++(int)
 	{
-		xml_node_iterator temp = *this;
+		html_node_iterator temp = *this;
 		++*this;
 		return temp;
 	}
 
-	const xml_node_iterator& xml_node_iterator::operator--()
+	const html_node_iterator& html_node_iterator::operator--()
 	{
 		_wrap = _wrap._root ? _wrap.previous_sibling() : _parent.last_child();
 		return *this;
 	}
 
-	xml_node_iterator xml_node_iterator::operator--(int)
+	html_node_iterator html_node_iterator::operator--(int)
 	{
-		xml_node_iterator temp = *this;
+		html_node_iterator temp = *this;
 		--*this;
 		return temp;
 	}
 
-	xml_attribute_iterator::xml_attribute_iterator()
+	html_attribute_iterator::html_attribute_iterator()
 	{
 	}
 
-	xml_attribute_iterator::xml_attribute_iterator(const xml_attribute& attr, const xml_node& parent): _wrap(attr), _parent(parent)
+	html_attribute_iterator::html_attribute_iterator(const html_attribute& attr, const html_node& parent): _wrap(attr), _parent(parent)
 	{
 	}
 
-	xml_attribute_iterator::xml_attribute_iterator(xml_attribute_struct* ref, xml_node_struct* parent): _wrap(ref), _parent(parent)
+	html_attribute_iterator::html_attribute_iterator(html_attribute_struct* ref, html_node_struct* parent): _wrap(ref), _parent(parent)
 	{
 	}
 
-	bool xml_attribute_iterator::operator==(const xml_attribute_iterator& rhs) const
+	bool html_attribute_iterator::operator==(const html_attribute_iterator& rhs) const
 	{
 		return _wrap._attr == rhs._wrap._attr && _parent._root == rhs._parent._root;
 	}
 	
-	bool xml_attribute_iterator::operator!=(const xml_attribute_iterator& rhs) const
+	bool html_attribute_iterator::operator!=(const html_attribute_iterator& rhs) const
 	{
 		return _wrap._attr != rhs._wrap._attr || _parent._root != rhs._parent._root;
 	}
 
-	xml_attribute& xml_attribute_iterator::operator*()
+	html_attribute& html_attribute_iterator::operator*()
 	{
 		assert(_wrap._attr);
 		return _wrap;
 	}
 
-	xml_attribute* xml_attribute_iterator::operator->()
+	html_attribute* html_attribute_iterator::operator->()
 	{
 		assert(_wrap._attr);
 		return &_wrap;
 	}
 
-	const xml_attribute_iterator& xml_attribute_iterator::operator++()
+	const html_attribute_iterator& html_attribute_iterator::operator++()
 	{
 		assert(_wrap._attr);
 		_wrap._attr = _wrap._attr->next_attribute;
 		return *this;
 	}
 
-	xml_attribute_iterator xml_attribute_iterator::operator++(int)
+	html_attribute_iterator html_attribute_iterator::operator++(int)
 	{
-		xml_attribute_iterator temp = *this;
+		html_attribute_iterator temp = *this;
 		++*this;
 		return temp;
 	}
 
-	const xml_attribute_iterator& xml_attribute_iterator::operator--()
+	const html_attribute_iterator& html_attribute_iterator::operator--()
 	{
 		_wrap = _wrap._attr ? _wrap.previous_attribute() : _parent.last_attribute();
 		return *this;
 	}
 
-	xml_attribute_iterator xml_attribute_iterator::operator--(int)
+	html_attribute_iterator html_attribute_iterator::operator--(int)
 	{
-		xml_attribute_iterator temp = *this;
+		html_attribute_iterator temp = *this;
 		--*this;
 		return temp;
 	}
 
-    xml_parse_result::xml_parse_result(): status(status_internal_error), offset(0), encoding(encoding_auto)
+    html_parse_result::html_parse_result(): status(status_internal_error), offset(0), encoding(encoding_auto)
     {
     }
 
-    xml_parse_result::operator bool() const
+    html_parse_result::operator bool() const
     {
         return status == status_ok;
     }
 
-	const char* xml_parse_result::description() const
+	const char* html_parse_result::description() const
 	{
 		switch (status)
 		{
@@ -4488,52 +4488,52 @@ namespace pugi
 		}
 	}
 
-	xml_document::xml_document(): _buffer(0)
+	html_document::html_document(): _buffer(0)
 	{
 		create();
 	}
 
-	xml_document::~xml_document()
+	html_document::~html_document()
 	{
 		destroy();
 	}
 
-	void xml_document::reset()
+	void html_document::reset()
 	{
 		destroy();
 		create();
 	}
 
-    void xml_document::reset(const xml_document& proto)
+    void html_document::reset(const html_document& proto)
     {
         reset();
 
-        for (xml_node cur = proto.first_child(); cur; cur = cur.next_sibling())
+        for (html_node cur = proto.first_child(); cur; cur = cur.next_sibling())
             append_copy(cur);
     }
 
-	void xml_document::create()
+	void html_document::create()
 	{
 		// initialize sentinel page
-		STATIC_ASSERT(offsetof(xml_memory_page, data) + sizeof(xml_document_struct) + xml_memory_page_alignment <= sizeof(_memory));
+		STATIC_ASSERT(offsetof(html_memory_page, data) + sizeof(html_document_struct) + html_memory_page_alignment <= sizeof(_memory));
 
 		// align upwards to page boundary
-		void* page_memory = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(_memory) + (xml_memory_page_alignment - 1)) & ~(xml_memory_page_alignment - 1));
+		void* page_memory = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(_memory) + (html_memory_page_alignment - 1)) & ~(html_memory_page_alignment - 1));
 
 		// prepare page structure
-		xml_memory_page* page = xml_memory_page::construct(page_memory);
+		html_memory_page* page = html_memory_page::construct(page_memory);
 
-		page->busy_size = xml_memory_page_size;
+		page->busy_size = html_memory_page_size;
 
 		// allocate new root
-		_root = new (page->data) xml_document_struct(page);
+		_root = new (page->data) html_document_struct(page);
 		_root->prev_sibling_c = _root;
 
 		// setup sentinel page
-		page->allocator = static_cast<xml_document_struct*>(_root);
+		page->allocator = static_cast<html_document_struct*>(_root);
 	}
 
-	void xml_document::destroy()
+	void html_document::destroy()
 	{
 		// destroy static storage
 		if (_buffer)
@@ -4545,15 +4545,15 @@ namespace pugi
 		// destroy dynamic storage, leave sentinel page (it's in static memory)
 		if (_root)
 		{
-			xml_memory_page* root_page = reinterpret_cast<xml_memory_page*>(_root->header & xml_memory_page_pointer_mask);
+			html_memory_page* root_page = reinterpret_cast<html_memory_page*>(_root->header & html_memory_page_pointer_mask);
 			assert(root_page && !root_page->prev && !root_page->memory);
 
 			// destroy all pages
-			for (xml_memory_page* page = root_page->next; page; )
+			for (html_memory_page* page = root_page->next; page; )
 			{
-				xml_memory_page* next = page->next;
+				html_memory_page* next = page->next;
 
-				xml_allocator::deallocate_page(page);
+				html_allocator::deallocate_page(page);
 
 				page = next;
 			}
@@ -4568,14 +4568,14 @@ namespace pugi
 	}
 
 #ifndef PUGIHTML_NO_STL
-	xml_parse_result xml_document::load(std::basic_istream<char, std::char_traits<char> >& stream, unsigned int options, xml_encoding encoding)
+	html_parse_result html_document::load(std::basic_istream<char, std::char_traits<char> >& stream, unsigned int options, html_encoding encoding)
 	{
 		reset();
 
 		return load_stream_impl(*this, stream, options, encoding);
 	}
 
-	xml_parse_result xml_document::load(std::basic_istream<wchar_t, std::char_traits<wchar_t> >& stream, unsigned int options)
+	html_parse_result html_document::load(std::basic_istream<wchar_t, std::char_traits<wchar_t> >& stream, unsigned int options)
 	{
 		reset();
 
@@ -4583,19 +4583,19 @@ namespace pugi
 	}
 #endif
 
-	xml_parse_result xml_document::load(const char_t* contents, unsigned int options)
+	html_parse_result html_document::load(const char_t* contents, unsigned int options)
 	{
 		// Force native encoding (skip autodetection)
 	#ifdef PUGIHTML_WCHAR_MODE
-		xml_encoding encoding = encoding_wchar;
+		html_encoding encoding = encoding_wchar;
 	#else
-		xml_encoding encoding = encoding_utf8;
+		html_encoding encoding = encoding_utf8;
 	#endif
 
 		return load_buffer(contents, strlength(contents) * sizeof(char_t), options, encoding);
 	}
 
-	xml_parse_result xml_document::load_file(const char* path, unsigned int options, xml_encoding encoding)
+	html_parse_result html_document::load_file(const char* path, unsigned int options, html_encoding encoding)
 	{
 		reset();
 
@@ -4604,7 +4604,7 @@ namespace pugi
 		return load_file_impl(*this, file, options, encoding);
 	}
 
-	xml_parse_result xml_document::load_file(const wchar_t* path, unsigned int options, xml_encoding encoding)
+	html_parse_result html_document::load_file(const wchar_t* path, unsigned int options, html_encoding encoding)
 	{
 		reset();
 
@@ -4613,7 +4613,7 @@ namespace pugi
 		return load_file_impl(*this, file, options, encoding);
 	}
 
-	xml_parse_result xml_document::load_buffer_impl(void* contents, size_t size, unsigned int options, xml_encoding encoding, bool is_mutable, bool own)
+	html_parse_result html_document::load_buffer_impl(void* contents, size_t size, unsigned int options, html_encoding encoding, bool is_mutable, bool own)
 	{
 		reset();
 
@@ -4621,7 +4621,7 @@ namespace pugi
 		assert(contents || size == 0);
 
 		// get actual encoding
-		xml_encoding buffer_encoding = get_buffer_encoding(encoding, contents, size);
+		html_encoding buffer_encoding = get_buffer_encoding(encoding, contents, size);
 
 		// get private buffer
 		char_t* buffer = 0;
@@ -4633,7 +4633,7 @@ namespace pugi
 		if (own && buffer != contents && contents) global_deallocate(contents);
 
 		// parse
-		xml_parse_result res = xml_parser::parse(buffer, length, _root, options);
+		html_parse_result res = html_parser::parse(buffer, length, _root, options);
 
 		// remember encoding
 		res.encoding = buffer_encoding;
@@ -4644,30 +4644,30 @@ namespace pugi
 		return res;
 	}
 
-	xml_parse_result xml_document::load_buffer(const void* contents, size_t size, unsigned int options, xml_encoding encoding)
+	html_parse_result html_document::load_buffer(const void* contents, size_t size, unsigned int options, html_encoding encoding)
 	{
 		return load_buffer_impl(const_cast<void*>(contents), size, options, encoding, false, false);
 	}
 
-	xml_parse_result xml_document::load_buffer_inplace(void* contents, size_t size, unsigned int options, xml_encoding encoding)
+	html_parse_result html_document::load_buffer_inplace(void* contents, size_t size, unsigned int options, html_encoding encoding)
 	{
 		return load_buffer_impl(contents, size, options, encoding, true, false);
 	}
 		
-	xml_parse_result xml_document::load_buffer_inplace_own(void* contents, size_t size, unsigned int options, xml_encoding encoding)
+	html_parse_result html_document::load_buffer_inplace_own(void* contents, size_t size, unsigned int options, html_encoding encoding)
 	{
 		return load_buffer_impl(contents, size, options, encoding, true, true);
 	}
 
-	void xml_document::save(xml_writer& writer, const char_t* indent, unsigned int flags, xml_encoding encoding) const
+	void html_document::save(html_writer& writer, const char_t* indent, unsigned int flags, html_encoding encoding) const
 	{
 		if (flags & format_write_bom) write_bom(writer, get_write_encoding(encoding));
 
-		xml_buffered_writer buffered_writer(writer, encoding);
+		html_buffered_writer buffered_writer(writer, encoding);
 
 		if (!(flags & format_no_declaration) && !has_declaration(*this))
 		{
-			buffered_writer.write(PUGIHTML_TEXT("<?xml version=\"1.0\"?>"));
+			buffered_writer.write(PUGIHTML_TEXT("<?html version=\"1.0\"?>"));
 			if (!(flags & format_raw)) buffered_writer.write('\n');
 		}
 
@@ -4675,27 +4675,27 @@ namespace pugi
 	}
 
 #ifndef PUGIHTML_NO_STL
-	void xml_document::save(std::basic_ostream<char, std::char_traits<char> >& stream, const char_t* indent, unsigned int flags, xml_encoding encoding) const
+	void html_document::save(std::basic_ostream<char, std::char_traits<char> >& stream, const char_t* indent, unsigned int flags, html_encoding encoding) const
 	{
-		xml_writer_stream writer(stream);
+		html_writer_stream writer(stream);
 
 		save(writer, indent, flags, encoding);
 	}
 
-	void xml_document::save(std::basic_ostream<wchar_t, std::char_traits<wchar_t> >& stream, const char_t* indent, unsigned int flags) const
+	void html_document::save(std::basic_ostream<wchar_t, std::char_traits<wchar_t> >& stream, const char_t* indent, unsigned int flags) const
 	{
-		xml_writer_stream writer(stream);
+		html_writer_stream writer(stream);
 
 		save(writer, indent, flags, encoding_wchar);
 	}
 #endif
 
-	bool xml_document::save_file(const char* path, const char_t* indent, unsigned int flags, xml_encoding encoding) const
+	bool html_document::save_file(const char* path, const char_t* indent, unsigned int flags, html_encoding encoding) const
 	{
 		FILE* file = fopen(path, "wb");
 		if (!file) return false;
 
-		xml_writer_file writer(file);
+		html_writer_file writer(file);
 		save(writer, indent, flags, encoding);
 
 		fclose(file);
@@ -4703,12 +4703,12 @@ namespace pugi
 		return true;
 	}
 
-	bool xml_document::save_file(const wchar_t* path, const char_t* indent, unsigned int flags, xml_encoding encoding) const
+	bool html_document::save_file(const wchar_t* path, const char_t* indent, unsigned int flags, html_encoding encoding) const
 	{
 		FILE* file = open_file_wide(path, L"wb");
 		if (!file) return false;
 
-		xml_writer_file writer(file);
+		html_writer_file writer(file);
 		save(writer, indent, flags, encoding);
 
 		fclose(file);
@@ -4716,13 +4716,13 @@ namespace pugi
 		return true;
 	}
 
-    xml_node xml_document::document_element() const
+    html_node html_document::document_element() const
     {
-		for (xml_node_struct* i = _root->first_child; i; i = i->next_sibling)
-			if ((i->header & xml_memory_page_type_mask) + 1 == node_element)
-                return xml_node(i);
+		for (html_node_struct* i = _root->first_child; i; i = i->next_sibling)
+			if ((i->header & html_memory_page_type_mask) + 1 == node_element)
+                return html_node(i);
 
-        return xml_node();
+        return html_node();
     }
 
 #ifndef PUGIHTML_NO_STL
@@ -4772,12 +4772,12 @@ namespace pugi
 namespace std
 {
 	// Workarounds for (non-standard) iterator category detection for older versions (MSVC7/IC8 and earlier)
-	std::bidirectional_iterator_tag _Iter_cat(const xml_node_iterator&)
+	std::bidirectional_iterator_tag _Iter_cat(const html_node_iterator&)
 	{
 		return std::bidirectional_iterator_tag();
 	}
 
-	std::bidirectional_iterator_tag _Iter_cat(const xml_attribute_iterator&)
+	std::bidirectional_iterator_tag _Iter_cat(const html_attribute_iterator&)
 	{
 		return std::bidirectional_iterator_tag();
 	}
@@ -4788,12 +4788,12 @@ namespace std
 namespace std
 {
 	// Workarounds for (non-standard) iterator category detection
-	std::bidirectional_iterator_tag __iterator_category(const xml_node_iterator&)
+	std::bidirectional_iterator_tag __iterator_category(const html_node_iterator&)
 	{
 		return std::bidirectional_iterator_tag();
 	}
 
-	std::bidirectional_iterator_tag __iterator_category(const xml_attribute_iterator&)
+	std::bidirectional_iterator_tag __iterator_category(const html_attribute_iterator&)
 	{
 		return std::bidirectional_iterator_tag();
 	}
@@ -5414,7 +5414,7 @@ namespace
 			return xpath_string_const(na.attribute().value());
 		else
 		{
-			const xml_node& n = na.node();
+			const html_node& n = na.node();
 
 			switch (n.type())
 			{
@@ -5429,7 +5429,7 @@ namespace
 			{
 				xpath_string result;
 
-				xml_node cur = n.first_child();
+				html_node cur = n.first_child();
 				
 				while (cur && cur != n)
 				{
@@ -5458,7 +5458,7 @@ namespace
 		}
 	}
 	
-	unsigned int node_height(xml_node n)
+	unsigned int node_height(html_node n)
 	{
 	    unsigned int result = 0;
 	    
@@ -5471,7 +5471,7 @@ namespace
 	    return result;
 	}
 	
-	bool node_is_before(xml_node ln, unsigned int lh, xml_node rn, unsigned int rh)
+	bool node_is_before(html_node ln, unsigned int lh, html_node rn, unsigned int rh)
 	{
 		// normalize heights
 		for (unsigned int i = rh; i < lh; i++) ln = ln.parent();
@@ -5498,7 +5498,7 @@ namespace
         return false;
     }
 
-    bool node_is_ancestor(xml_node parent, xml_node node)
+    bool node_is_ancestor(html_node parent, html_node node)
     {
     	while (node && node != parent) node = node.parent();
 
@@ -5507,21 +5507,21 @@ namespace
 
     const void* document_order(const xpath_node& xnode)
     {
-        xml_node_struct* node = xnode.node().internal_object();
+        html_node_struct* node = xnode.node().internal_object();
 
         if (node)
         {
-            if (node->name && (node->header & xml_memory_page_name_allocated_mask) == 0) return node->name;
-            if (node->value && (node->header & xml_memory_page_value_allocated_mask) == 0) return node->value;
+            if (node->name && (node->header & html_memory_page_name_allocated_mask) == 0) return node->name;
+            if (node->value && (node->header & html_memory_page_value_allocated_mask) == 0) return node->value;
             return 0;
         }
 
-        xml_attribute_struct* attr = xnode.attribute().internal_object();
+        html_attribute_struct* attr = xnode.attribute().internal_object();
 
         if (attr)
         {
-            if ((attr->header & xml_memory_page_name_allocated_mask) == 0) return attr->name;
-            if ((attr->header & xml_memory_page_value_allocated_mask) == 0) return attr->value;
+            if ((attr->header & html_memory_page_name_allocated_mask) == 0) return attr->name;
+            if ((attr->header & html_memory_page_value_allocated_mask) == 0) return attr->value;
             return 0;
         }
 
@@ -5539,7 +5539,7 @@ namespace
 			if (lo && ro) return lo < ro;
 
             // slow comparison
-			xml_node ln = lhs.node(), rn = rhs.node();
+			html_node ln = lhs.node(), rn = rhs.node();
 
 			// compare attributes
 			if (lhs.attribute() && rhs.attribute())
@@ -5548,7 +5548,7 @@ namespace
 				if (lhs.parent() == rhs.parent())
 				{
 					// determine sibling order
-				    for (xml_attribute a = lhs.attribute(); a; a = a.next_attribute())
+				    for (html_attribute a = lhs.attribute(); a; a = a.next_attribute())
 				        if (a == rhs.attribute())
 				            return true;
 				    
@@ -5879,25 +5879,25 @@ namespace
 			prefix_length = pos ? static_cast<size_t>(pos - name) : 0;
 		}
 
-		bool operator()(const xml_attribute& a) const
+		bool operator()(const html_attribute& a) const
 		{
 			const char_t* name = a.name();
 
-			if (!starts_with(name, PUGIHTML_TEXT("xmlns"))) return false;
+			if (!starts_with(name, PUGIHTML_TEXT("htmlns"))) return false;
 
 			return prefix ? name[5] == ':' && strequalrange(name + 6, prefix, prefix_length) : name[5] == 0;
 		}
 	};
 
-	const char_t* namespace_uri(const xml_node& node)
+	const char_t* namespace_uri(const html_node& node)
 	{
 		namespace_uri_predicate pred = node.name();
 		
-		xml_node p = node;
+		html_node p = node;
 		
 		while (p)
 		{
-			xml_attribute a = p.find_attribute(pred);
+			html_attribute a = p.find_attribute(pred);
 			
 			if (a) return a.value();
 			
@@ -5907,18 +5907,18 @@ namespace
 		return PUGIHTML_TEXT("");
 	}
 
-	const char_t* namespace_uri(const xml_attribute& attr, const xml_node& parent)
+	const char_t* namespace_uri(const html_attribute& attr, const html_node& parent)
 	{
 		namespace_uri_predicate pred = attr.name();
 		
 		// Default namespace does not apply to attributes
 		if (!pred.prefix) return PUGIHTML_TEXT("");
 		
-		xml_node p = parent;
+		html_node p = parent;
 		
 		while (p)
 		{
-			xml_attribute a = p.find_attribute(pred);
+			html_attribute a = p.find_attribute(pred);
 			
 			if (a) return a.value();
 			
@@ -6982,15 +6982,15 @@ namespace
 			}
 		}
 
-		void step_push(xpath_node_set_raw& ns, const xml_attribute& a, const xml_node& parent, xpath_allocator* alloc)
+		void step_push(xpath_node_set_raw& ns, const html_attribute& a, const html_node& parent, xpath_allocator* alloc)
 		{
 			if (!a) return;
 
 			const char_t* name = a.name();
 
 			// There are no attribute nodes corresponding to attributes that declare namespaces
-			// That is, "xmlns:..." or "xmlns"
-			if (starts_with(name, PUGIHTML_TEXT("xmlns")) && (name[5] == 0 || name[5] == ':')) return;
+			// That is, "htmlns:..." or "htmlns"
+			if (starts_with(name, PUGIHTML_TEXT("htmlns")) && (name[5] == 0 || name[5] == ':')) return;
 			
 			switch (_test)
 			{
@@ -7013,7 +7013,7 @@ namespace
 			}
 		}
 		
-		void step_push(xpath_node_set_raw& ns, const xml_node& n, xpath_allocator* alloc)
+		void step_push(xpath_node_set_raw& ns, const html_node& n, xpath_allocator* alloc)
 		{
 			if (!n) return;
 
@@ -7062,7 +7062,7 @@ namespace
 			} 
 		}
 
-		template <class T> void step_fill(xpath_node_set_raw& ns, const xml_node& n, xpath_allocator* alloc, T)
+		template <class T> void step_fill(xpath_node_set_raw& ns, const html_node& n, xpath_allocator* alloc, T)
 		{
 			const axis_t axis = T::axis;
 
@@ -7070,7 +7070,7 @@ namespace
 			{
 			case axis_attribute:
 			{
-				for (xml_attribute a = n.first_attribute(); a; a = a.next_attribute())
+				for (html_attribute a = n.first_attribute(); a; a = a.next_attribute())
 					step_push(ns, a, n, alloc);
 				
 				break;
@@ -7078,7 +7078,7 @@ namespace
 			
 			case axis_child:
 			{
-				for (xml_node c = n.first_child(); c; c = c.next_sibling())
+				for (html_node c = n.first_child(); c; c = c.next_sibling())
 					step_push(ns, c, alloc);
 					
 				break;
@@ -7090,7 +7090,7 @@ namespace
 				if (axis == axis_descendant_or_self)
 					step_push(ns, n, alloc);
 					
-				xml_node cur = n.first_child();
+				html_node cur = n.first_child();
 				
 				while (cur && cur != n)
 				{
@@ -7114,7 +7114,7 @@ namespace
 			
 			case axis_following_sibling:
 			{
-				for (xml_node c = n.next_sibling(); c; c = c.next_sibling())
+				for (html_node c = n.next_sibling(); c; c = c.next_sibling())
 					step_push(ns, c, alloc);
 				
 				break;
@@ -7122,7 +7122,7 @@ namespace
 			
 			case axis_preceding_sibling:
 			{
-				for (xml_node c = n.previous_sibling(); c; c = c.previous_sibling())
+				for (html_node c = n.previous_sibling(); c; c = c.previous_sibling())
 					step_push(ns, c, alloc);
 				
 				break;
@@ -7130,7 +7130,7 @@ namespace
 			
 			case axis_following:
 			{
-				xml_node cur = n;
+				html_node cur = n;
 
 				// exit from this node so that we don't include descendants
 				while (cur && !cur.next_sibling()) cur = cur.parent();
@@ -7158,7 +7158,7 @@ namespace
 
 			case axis_preceding:
 			{
-				xml_node cur = n;
+				html_node cur = n;
 
 				while (cur && !cur.previous_sibling()) cur = cur.parent();
 				cur = cur.previous_sibling();
@@ -7201,7 +7201,7 @@ namespace
 				if (axis == axis_ancestor_or_self)
 					step_push(ns, n, alloc);
 
-				xml_node cur = n.parent();
+				html_node cur = n.parent();
 				
 				while (cur)
 				{
@@ -7232,7 +7232,7 @@ namespace
 			}
 		}
 		
-		template <class T> void step_fill(xpath_node_set_raw& ns, const xml_attribute& a, const xml_node& p, xpath_allocator* alloc, T v)
+		template <class T> void step_fill(xpath_node_set_raw& ns, const html_attribute& a, const html_node& p, xpath_allocator* alloc, T v)
 		{
 			const axis_t axis = T::axis;
 
@@ -7244,7 +7244,7 @@ namespace
 				if (axis == axis_ancestor_or_self && _test == nodetest_type_node) // reject attributes based on principal node type test
 					step_push(ns, a, p, alloc);
 
-				xml_node cur = p;
+				html_node cur = p;
 				
 				while (cur)
 				{
@@ -7267,7 +7267,7 @@ namespace
 
 			case axis_following:
 			{
-				xml_node cur = p;
+				html_node cur = p;
 				
 				for (;;)
 				{
@@ -7467,9 +7467,9 @@ namespace
 
 				xpath_string lang = _left->eval_string(c, stack);
 				
-				for (xml_node n = c.n.node(); n; n = n.parent())
+				for (html_node n = c.n.node(); n; n = n.parent())
 				{
-					xml_attribute a = n.attribute(PUGIHTML_TEXT("xml:lang"));
+					html_attribute a = n.attribute(PUGIHTML_TEXT("html:lang"));
 					
 					if (a)
 					{
@@ -9013,25 +9013,25 @@ namespace pugi
 	{
 	}
 		
-	xpath_node::xpath_node(const xml_node& node): _node(node)
+	xpath_node::xpath_node(const html_node& node): _node(node)
 	{
 	}
 		
-	xpath_node::xpath_node(const xml_attribute& attribute, const xml_node& parent): _node(attribute ? parent : xml_node()), _attribute(attribute)
+	xpath_node::xpath_node(const html_attribute& attribute, const html_node& parent): _node(attribute ? parent : html_node()), _attribute(attribute)
 	{
 	}
 
-	xml_node xpath_node::node() const
+	html_node xpath_node::node() const
 	{
-		return _attribute ? xml_node() : _node;
+		return _attribute ? html_node() : _node;
 	}
 		
-	xml_attribute xpath_node::attribute() const
+	html_attribute xpath_node::attribute() const
 	{
 		return _attribute;
 	}
 	
-	xml_node xpath_node::parent() const
+	html_node xpath_node::parent() const
 	{
 		return _attribute ? _node : _node.parent();
 	}
@@ -9523,25 +9523,25 @@ namespace pugi
 		return !_impl;
 	}
 
-	xpath_node xml_node::select_single_node(const char_t* query, xpath_variable_set* variables) const
+	xpath_node html_node::select_single_node(const char_t* query, xpath_variable_set* variables) const
 	{
 		xpath_query q(query, variables);
 		return select_single_node(q);
 	}
 
-	xpath_node xml_node::select_single_node(const xpath_query& query) const
+	xpath_node html_node::select_single_node(const xpath_query& query) const
 	{
 		xpath_node_set s = query.evaluate_node_set(*this);
 		return s.empty() ? xpath_node() : s.first();
 	}
 
-	xpath_node_set xml_node::select_nodes(const char_t* query, xpath_variable_set* variables) const
+	xpath_node_set html_node::select_nodes(const char_t* query, xpath_variable_set* variables) const
 	{
 		xpath_query q(query, variables);
 		return select_nodes(q);
 	}
 
-	xpath_node_set xml_node::select_nodes(const xpath_query& query) const
+	xpath_node_set html_node::select_nodes(const xpath_query& query) const
 	{
 		return query.evaluate_node_set(*this);
 	}

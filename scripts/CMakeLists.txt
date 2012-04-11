@@ -1,5 +1,5 @@
-project(pugixml)
+project(pugihtml)
 
-set(SOURCES ../src/pugixml.hpp ../src/pugiconfig.hpp ../src/pugixml.cpp)
+set(SOURCES ../src/pugihtml.hpp ../src/pugiconfig.hpp ../src/pugihtml.cpp)
 
-add_library(pugixml STATIC ${SOURCES})
+add_library(pugihtml STATIC ${SOURCES})

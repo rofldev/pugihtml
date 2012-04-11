@@ -98,11 +98,11 @@ namespace pugi
 #endif
 }
 
-// The PugiXML namespace
+// The PugiHTML namespace
 namespace pugi
 {
 	// Tree node types
-	enum xml_node_type
+	enum html_node_type
 	{
 		node_null,          // Empty (null) node handle
 		node_document,		// A document tree's absolute root
@@ -111,7 +111,7 @@ namespace pugi
 		node_cdata,			// Character data, i.e. '<![CDATA[text]]>'
 		node_comment,		// Comment tag, i.e. '<!-- text -->'
 		node_pi,			// Processing instruction, i.e. '<?name?>'
-		node_declaration,	// Document declaration, i.e. '<?xml version="1.0"?>'
+		node_declaration,	// Document declaration, i.e. '<?html version="1.0"?>'
         node_doctype        // Document type declaration, i.e. '<!DOCTYPE doc>'
 	};
 
@@ -163,7 +163,7 @@ namespace pugi
     const unsigned int parse_full = parse_default | parse_pi | parse_comments | parse_declaration | parse_doctype;
 
 	// These flags determine the encoding of input data for HTML document
-	enum xml_encoding
+	enum html_encoding
 	{
 		encoding_auto,      // Auto-detect input encoding using BOM or < / <? detection; use UTF8 if BOM is not found
 		encoding_utf8,      // UTF8 encoding
@@ -195,15 +195,15 @@ namespace pugi
 	const unsigned int format_default = format_indent;
 		
 	// Forward declarations
-	struct xml_attribute_struct;
-	struct xml_node_struct;
+	struct html_attribute_struct;
+	struct html_node_struct;
 
-	class xml_node_iterator;
-	class xml_attribute_iterator;
+	class html_node_iterator;
+	class html_attribute_iterator;
 
-	class xml_tree_walker;
+	class html_tree_walker;
 	
-	class xml_node;
+	class html_node;
 
 	#ifndef PUGIHTML_NO_XPATH
 	class xpath_node;
@@ -212,22 +212,22 @@ namespace pugi
 	class xpath_variable_set;
 	#endif
 
-	// Writer interface for node printing (see xml_node::print)
-	class PUGIHTML_CLASS xml_writer
+	// Writer interface for node printing (see html_node::print)
+	class PUGIHTML_CLASS html_writer
 	{
 	public:
-		virtual ~xml_writer() {}
+		virtual ~html_writer() {}
 
 		// Write memory chunk into stream/file/whatever
 		virtual void write(const void* data, size_t size) = 0;
 	};
 
-	// xml_writer implementation for FILE*
-	class PUGIHTML_CLASS xml_writer_file: public xml_writer
+	// html_writer implementation for FILE*
+	class PUGIHTML_CLASS html_writer_file: public html_writer
 	{
 	public:
         // Construct writer from a FILE* object; void* is used to avoid header dependencies on stdio
-		xml_writer_file(void* file);
+		html_writer_file(void* file);
 
 		virtual void write(const void* data, size_t size);
 
@@ -236,13 +236,13 @@ namespace pugi
 	};
 
 	#ifndef PUGIHTML_NO_STL
-	// xml_writer implementation for streams
-	class PUGIHTML_CLASS xml_writer_stream: public xml_writer
+	// html_writer implementation for streams
+	class PUGIHTML_CLASS html_writer_stream: public html_writer
 	{
 	public:
         // Construct writer from an output stream object
-		xml_writer_stream(std::basic_ostream<char, std::char_traits<char> >& stream);
-		xml_writer_stream(std::basic_ostream<wchar_t, std::char_traits<wchar_t> >& stream);
+		html_writer_stream(std::basic_ostream<char, std::char_traits<char> >& stream);
+		html_writer_stream(std::basic_ostream<wchar_t, std::char_traits<wchar_t> >& stream);
 
 		virtual void write(const void* data, size_t size);
 
@@ -253,22 +253,22 @@ namespace pugi
 	#endif
 
 	// A light-weight handle for manipulating attributes in DOM tree
-	class PUGIHTML_CLASS xml_attribute
+	class PUGIHTML_CLASS html_attribute
 	{
-		friend class xml_attribute_iterator;
-		friend class xml_node;
+		friend class html_attribute_iterator;
+		friend class html_node;
 
 	private:
-		xml_attribute_struct* _attr;
+		html_attribute_struct* _attr;
 	
-    	typedef xml_attribute_struct* xml_attribute::*unspecified_bool_type;
+    	typedef html_attribute_struct* html_attribute::*unspecified_bool_type;
 
 	public:
         // Default constructor. Constructs an empty attribute.
-		xml_attribute();
+		html_attribute();
 		
         // Constructs attribute from internal pointer
-		explicit xml_attribute(xml_attribute_struct* attr);
+		explicit html_attribute(html_attribute_struct* attr);
 
     	// Safe bool conversion operator
     	operator unspecified_bool_type() const;
@@ -277,12 +277,12 @@ namespace pugi
     	bool operator!() const;
 
 		// Comparison operators (compares wrapped attribute pointers)
-		bool operator==(const xml_attribute& r) const;
-		bool operator!=(const xml_attribute& r) const;
-		bool operator<(const xml_attribute& r) const;
-		bool operator>(const xml_attribute& r) const;
-		bool operator<=(const xml_attribute& r) const;
-		bool operator>=(const xml_attribute& r) const;
+		bool operator==(const html_attribute& r) const;
+		bool operator!=(const html_attribute& r) const;
+		bool operator<(const html_attribute& r) const;
+		bool operator>(const html_attribute& r) const;
+		bool operator<=(const html_attribute& r) const;
+		bool operator>=(const html_attribute& r) const;
 
 		// Check if attribute is empty
 		bool empty() const;
@@ -311,46 +311,46 @@ namespace pugi
 		bool set_value(bool rhs);
 
 		// Set attribute value (equivalent to set_value without error checking)
-		xml_attribute& operator=(const char_t* rhs);
-		xml_attribute& operator=(int rhs);
-		xml_attribute& operator=(unsigned int rhs);
-		xml_attribute& operator=(double rhs);
-		xml_attribute& operator=(bool rhs);
+		html_attribute& operator=(const char_t* rhs);
+		html_attribute& operator=(int rhs);
+		html_attribute& operator=(unsigned int rhs);
+		html_attribute& operator=(double rhs);
+		html_attribute& operator=(bool rhs);
 
         // Get next/previous attribute in the attribute list of the parent node
-    	xml_attribute next_attribute() const;
-    	xml_attribute previous_attribute() const;
+    	html_attribute next_attribute() const;
+    	html_attribute previous_attribute() const;
 
         // Get hash value (unique for handles to the same object)
         size_t hash_value() const;
 
 		// Get internal pointer
-		xml_attribute_struct* internal_object() const;
+		html_attribute_struct* internal_object() const;
 	};
 
 #ifdef __BORLANDC__
 	// Borland C++ workaround
-	bool PUGIHTML_FUNCTION operator&&(const xml_attribute& lhs, bool rhs);
-	bool PUGIHTML_FUNCTION operator||(const xml_attribute& lhs, bool rhs);
+	bool PUGIHTML_FUNCTION operator&&(const html_attribute& lhs, bool rhs);
+	bool PUGIHTML_FUNCTION operator||(const html_attribute& lhs, bool rhs);
 #endif
 
 	// A light-weight handle for manipulating nodes in DOM tree
-	class PUGIHTML_CLASS xml_node
+	class PUGIHTML_CLASS html_node
 	{
-		friend class xml_attribute_iterator;
-		friend class xml_node_iterator;
+		friend class html_attribute_iterator;
+		friend class html_node_iterator;
 
 	protected:
-		xml_node_struct* _root;
+		html_node_struct* _root;
 
-    	typedef xml_node_struct* xml_node::*unspecified_bool_type;
+    	typedef html_node_struct* html_node::*unspecified_bool_type;
 
 	public:
 		// Default constructor. Constructs an empty node.
-		xml_node();
+		html_node();
 
         // Constructs node from internal pointer
-		explicit xml_node(xml_node_struct* p);
+		explicit html_node(html_node_struct* p);
 
     	// Safe bool conversion operator
 		operator unspecified_bool_type() const;
@@ -359,46 +359,46 @@ namespace pugi
 		bool operator!() const;
 	
 		// Comparison operators (compares wrapped node pointers)
-		bool operator==(const xml_node& r) const;
-		bool operator!=(const xml_node& r) const;
-		bool operator<(const xml_node& r) const;
-		bool operator>(const xml_node& r) const;
-		bool operator<=(const xml_node& r) const;
-		bool operator>=(const xml_node& r) const;
+		bool operator==(const html_node& r) const;
+		bool operator!=(const html_node& r) const;
+		bool operator<(const html_node& r) const;
+		bool operator>(const html_node& r) const;
+		bool operator<=(const html_node& r) const;
+		bool operator>=(const html_node& r) const;
 
 		// Check if node is empty.
 		bool empty() const;
 
 		// Get node type
-		xml_node_type type() const;
+		html_node_type type() const;
 
 		// Get node name/value, or "" if node is empty or it has no name/value
 		const char_t* name() const;
 		const char_t* value() const;
 	
 		// Get attribute list
-		xml_attribute first_attribute() const;
-        xml_attribute last_attribute() const;
+		html_attribute first_attribute() const;
+        html_attribute last_attribute() const;
 
         // Get children list
-		xml_node first_child() const;
-        xml_node last_child() const;
+		html_node first_child() const;
+        html_node last_child() const;
 
         // Get next/previous sibling in the children list of the parent node
-		xml_node next_sibling() const;
-		xml_node previous_sibling() const;
+		html_node next_sibling() const;
+		html_node previous_sibling() const;
 		
         // Get parent node
-		xml_node parent() const;
+		html_node parent() const;
 
 		// Get root of DOM tree this node belongs to
-		xml_node root() const;
+		html_node root() const;
 
 		// Get child, attribute or next/previous sibling with the specified name
-		xml_node child(const char_t* name) const;
-		xml_attribute attribute(const char_t* name) const;
-		xml_node next_sibling(const char_t* name) const;
-		xml_node previous_sibling(const char_t* name) const;
+		html_node child(const char_t* name) const;
+		html_attribute attribute(const char_t* name) const;
+		html_node next_sibling(const char_t* name) const;
+		html_node previous_sibling(const char_t* name) const;
 
 		// Get child value of current node; that is, value of the first child node of type PCDATA/CDATA
 		const char_t* child_value() const;
@@ -411,73 +411,73 @@ namespace pugi
 		bool set_value(const char_t* rhs);
 		
 		// Add attribute with specified name. Returns added attribute, or empty attribute on errors.
-		xml_attribute append_attribute(const char_t* name);
-		xml_attribute prepend_attribute(const char_t* name);
-		xml_attribute insert_attribute_after(const char_t* name, const xml_attribute& attr);
-		xml_attribute insert_attribute_before(const char_t* name, const xml_attribute& attr);
+		html_attribute append_attribute(const char_t* name);
+		html_attribute prepend_attribute(const char_t* name);
+		html_attribute insert_attribute_after(const char_t* name, const html_attribute& attr);
+		html_attribute insert_attribute_before(const char_t* name, const html_attribute& attr);
 
 		// Add a copy of the specified attribute. Returns added attribute, or empty attribute on errors.
-		xml_attribute append_copy(const xml_attribute& proto);
-		xml_attribute prepend_copy(const xml_attribute& proto);
-		xml_attribute insert_copy_after(const xml_attribute& proto, const xml_attribute& attr);
-		xml_attribute insert_copy_before(const xml_attribute& proto, const xml_attribute& attr);
+		html_attribute append_copy(const html_attribute& proto);
+		html_attribute prepend_copy(const html_attribute& proto);
+		html_attribute insert_copy_after(const html_attribute& proto, const html_attribute& attr);
+		html_attribute insert_copy_before(const html_attribute& proto, const html_attribute& attr);
 
 		// Add child node with specified type. Returns added node, or empty node on errors.
-		xml_node append_child(xml_node_type type = node_element);
-		xml_node prepend_child(xml_node_type type = node_element);
-		xml_node insert_child_after(xml_node_type type, const xml_node& node);
-		xml_node insert_child_before(xml_node_type type, const xml_node& node);
+		html_node append_child(html_node_type type = node_element);
+		html_node prepend_child(html_node_type type = node_element);
+		html_node insert_child_after(html_node_type type, const html_node& node);
+		html_node insert_child_before(html_node_type type, const html_node& node);
 
 		// Add child element with specified name. Returns added node, or empty node on errors.
-		xml_node append_child(const char_t* name);
-		xml_node prepend_child(const char_t* name);
-		xml_node insert_child_after(const char_t* name, const xml_node& node);
-		xml_node insert_child_before(const char_t* name, const xml_node& node);
+		html_node append_child(const char_t* name);
+		html_node prepend_child(const char_t* name);
+		html_node insert_child_after(const char_t* name, const html_node& node);
+		html_node insert_child_before(const char_t* name, const html_node& node);
 
 		// Add a copy of the specified node as a child. Returns added node, or empty node on errors.
-		xml_node append_copy(const xml_node& proto);
-		xml_node prepend_copy(const xml_node& proto);
-		xml_node insert_copy_after(const xml_node& proto, const xml_node& node);
-		xml_node insert_copy_before(const xml_node& proto, const xml_node& node);
+		html_node append_copy(const html_node& proto);
+		html_node prepend_copy(const html_node& proto);
+		html_node insert_copy_after(const html_node& proto, const html_node& node);
+		html_node insert_copy_before(const html_node& proto, const html_node& node);
 
 		// Remove specified attribute
-		bool remove_attribute(const xml_attribute& a);
+		bool remove_attribute(const html_attribute& a);
 		bool remove_attribute(const char_t* name);
 
 		// Remove specified child
-		bool remove_child(const xml_node& n);
+		bool remove_child(const html_node& n);
 		bool remove_child(const char_t* name);
 
 		// Find attribute using predicate. Returns first attribute for which predicate returned true.
-		template <typename Predicate> xml_attribute find_attribute(Predicate pred) const
+		template <typename Predicate> html_attribute find_attribute(Predicate pred) const
 		{
-			if (!_root) return xml_attribute();
+			if (!_root) return html_attribute();
 			
-			for (xml_attribute attrib = first_attribute(); attrib; attrib = attrib.next_attribute())
+			for (html_attribute attrib = first_attribute(); attrib; attrib = attrib.next_attribute())
 				if (pred(attrib))
 					return attrib;
 		
-			return xml_attribute();
+			return html_attribute();
 		}
 
 		// Find child node using predicate. Returns first child for which predicate returned true.
-		template <typename Predicate> xml_node find_child(Predicate pred) const
+		template <typename Predicate> html_node find_child(Predicate pred) const
 		{
-			if (!_root) return xml_node();
+			if (!_root) return html_node();
 	
-			for (xml_node node = first_child(); node; node = node.next_sibling())
+			for (html_node node = first_child(); node; node = node.next_sibling())
 				if (pred(node))
 					return node;
         
-	        return xml_node();
+	        return html_node();
 		}
 
 		// Find node from subtree using predicate. Returns first node from subtree (depth-first), for which predicate returned true.
-		template <typename Predicate> xml_node find_node(Predicate pred) const
+		template <typename Predicate> html_node find_node(Predicate pred) const
 		{
-			if (!_root) return xml_node();
+			if (!_root) return html_node();
 
-			xml_node cur = first_child();
+			html_node cur = first_child();
 			
 			while (cur._root && cur._root != _root)
 			{
@@ -493,12 +493,12 @@ namespace pugi
 				}
 			}
 
-			return xml_node();
+			return html_node();
 		}
 
 		// Find child node by attribute name/value
-		xml_node find_child_by_attribute(const char_t* name, const char_t* attr_name, const char_t* attr_value) const;
-		xml_node find_child_by_attribute(const char_t* attr_name, const char_t* attr_value) const;
+		html_node find_child_by_attribute(const char_t* name, const char_t* attr_name, const char_t* attr_value) const;
+		html_node find_child_by_attribute(const char_t* attr_name, const char_t* attr_value) const;
 
 	#ifndef PUGIHTML_NO_STL
 		// Get the absolute node path from root as a text string.
@@ -506,10 +506,10 @@ namespace pugi
 	#endif
 
 		// Search for a node by path consisting of node names and . or .. elements.
-		xml_node first_element_by_path(const char_t* path, char_t delimiter = '/') const;
+		html_node first_element_by_path(const char_t* path, char_t delimiter = '/') const;
 
-		// Recursively traverse subtree with xml_tree_walker
-		bool traverse(xml_tree_walker& walker);
+		// Recursively traverse subtree with html_tree_walker
+		bool traverse(html_tree_walker& walker);
 	
 	#ifndef PUGIHTML_NO_XPATH
 		// Select single node by evaluating XPath query. Returns first node from the resulting node set.
@@ -522,22 +522,22 @@ namespace pugi
 	#endif
 		
 		// Print subtree using a writer object
-		void print(xml_writer& writer, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, xml_encoding encoding = encoding_auto, unsigned int depth = 0) const;
+		void print(html_writer& writer, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, html_encoding encoding = encoding_auto, unsigned int depth = 0) const;
 
 	#ifndef PUGIHTML_NO_STL
 		// Print subtree to stream
-		void print(std::basic_ostream<char, std::char_traits<char> >& os, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, xml_encoding encoding = encoding_auto, unsigned int depth = 0) const;
+		void print(std::basic_ostream<char, std::char_traits<char> >& os, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, html_encoding encoding = encoding_auto, unsigned int depth = 0) const;
 		void print(std::basic_ostream<wchar_t, std::char_traits<wchar_t> >& os, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, unsigned int depth = 0) const;
 	#endif
 
 		// Child nodes iterators
-		typedef xml_node_iterator iterator;
+		typedef html_node_iterator iterator;
 
 		iterator begin() const;
 		iterator end() const;
 
 		// Attribute iterators
-		typedef xml_attribute_iterator attribute_iterator;
+		typedef html_attribute_iterator attribute_iterator;
 
 		attribute_iterator attributes_begin() const;
 		attribute_iterator attributes_end() const;
@@ -549,103 +549,103 @@ namespace pugi
         size_t hash_value() const;
 
 		// Get internal pointer
-		xml_node_struct* internal_object() const;
+		html_node_struct* internal_object() const;
 	};
 
 #ifdef __BORLANDC__
 	// Borland C++ workaround
-	bool PUGIHTML_FUNCTION operator&&(const xml_node& lhs, bool rhs);
-	bool PUGIHTML_FUNCTION operator||(const xml_node& lhs, bool rhs);
+	bool PUGIHTML_FUNCTION operator&&(const html_node& lhs, bool rhs);
+	bool PUGIHTML_FUNCTION operator||(const html_node& lhs, bool rhs);
 #endif
 
-	// Child node iterator (a bidirectional iterator over a collection of xml_node)
-	class PUGIHTML_CLASS xml_node_iterator
+	// Child node iterator (a bidirectional iterator over a collection of html_node)
+	class PUGIHTML_CLASS html_node_iterator
 	{
-		friend class xml_node;
+		friend class html_node;
 
 	private:
-		xml_node _wrap;
-		xml_node _parent;
+		html_node _wrap;
+		html_node _parent;
 
-		xml_node_iterator(xml_node_struct* ref, xml_node_struct* parent);
+		html_node_iterator(html_node_struct* ref, html_node_struct* parent);
 
 	public:
 		// Iterator traits
 		typedef ptrdiff_t difference_type;
-		typedef xml_node value_type;
-		typedef xml_node* pointer;
-		typedef xml_node& reference;
+		typedef html_node value_type;
+		typedef html_node* pointer;
+		typedef html_node& reference;
 
 	#ifndef PUGIHTML_NO_STL
 		typedef std::bidirectional_iterator_tag iterator_category;
 	#endif
 
         // Default constructor
-		xml_node_iterator();
+		html_node_iterator();
 
         // Construct an iterator which points to the specified node
-		xml_node_iterator(const xml_node& node);
+		html_node_iterator(const html_node& node);
 
         // Iterator operators
-		bool operator==(const xml_node_iterator& rhs) const;
-		bool operator!=(const xml_node_iterator& rhs) const;
+		bool operator==(const html_node_iterator& rhs) const;
+		bool operator!=(const html_node_iterator& rhs) const;
 
-		xml_node& operator*();
-		xml_node* operator->();
+		html_node& operator*();
+		html_node* operator->();
 
-		const xml_node_iterator& operator++();
-		xml_node_iterator operator++(int);
+		const html_node_iterator& operator++();
+		html_node_iterator operator++(int);
 
-		const xml_node_iterator& operator--();
-		xml_node_iterator operator--(int);
+		const html_node_iterator& operator--();
+		html_node_iterator operator--(int);
 	};
 
-	// Attribute iterator (a bidirectional iterator over a collection of xml_attribute)
-	class PUGIHTML_CLASS xml_attribute_iterator
+	// Attribute iterator (a bidirectional iterator over a collection of html_attribute)
+	class PUGIHTML_CLASS html_attribute_iterator
 	{
-		friend class xml_node;
+		friend class html_node;
 
 	private:
-		xml_attribute _wrap;
-		xml_node _parent;
+		html_attribute _wrap;
+		html_node _parent;
 
-		xml_attribute_iterator(xml_attribute_struct* ref, xml_node_struct* parent);
+		html_attribute_iterator(html_attribute_struct* ref, html_node_struct* parent);
 
 	public:
 		// Iterator traits
 		typedef ptrdiff_t difference_type;
-		typedef xml_attribute value_type;
-		typedef xml_attribute* pointer;
-		typedef xml_attribute& reference;
+		typedef html_attribute value_type;
+		typedef html_attribute* pointer;
+		typedef html_attribute& reference;
 
 	#ifndef PUGIHTML_NO_STL
 		typedef std::bidirectional_iterator_tag iterator_category;
 	#endif
 
         // Default constructor
-		xml_attribute_iterator();
+		html_attribute_iterator();
 
         // Construct an iterator which points to the specified attribute
-		xml_attribute_iterator(const xml_attribute& attr, const xml_node& parent);
+		html_attribute_iterator(const html_attribute& attr, const html_node& parent);
 
 		// Iterator operators
-		bool operator==(const xml_attribute_iterator& rhs) const;
-		bool operator!=(const xml_attribute_iterator& rhs) const;
+		bool operator==(const html_attribute_iterator& rhs) const;
+		bool operator!=(const html_attribute_iterator& rhs) const;
 
-		xml_attribute& operator*();
-		xml_attribute* operator->();
+		html_attribute& operator*();
+		html_attribute* operator->();
 
-		const xml_attribute_iterator& operator++();
-		xml_attribute_iterator operator++(int);
+		const html_attribute_iterator& operator++();
+		html_attribute_iterator operator++(int);
 
-		const xml_attribute_iterator& operator--();
-		xml_attribute_iterator operator--(int);
+		const html_attribute_iterator& operator--();
+		html_attribute_iterator operator--(int);
 	};
 
-	// Abstract tree walker class (see xml_node::traverse)
-	class PUGIHTML_CLASS xml_tree_walker
+	// Abstract tree walker class (see html_node::traverse)
+	class PUGIHTML_CLASS html_tree_walker
 	{
-		friend class xml_node;
+		friend class html_node;
 
 	private:
 		int _depth;
@@ -655,21 +655,21 @@ namespace pugi
 		int depth() const;
 	
 	public:
-		xml_tree_walker();
-		virtual ~xml_tree_walker();
+		html_tree_walker();
+		virtual ~html_tree_walker();
 
 		// Callback that is called when traversal begins
-		virtual bool begin(xml_node& node);
+		virtual bool begin(html_node& node);
 
 		// Callback that is called for each node traversed
-		virtual bool for_each(xml_node& node) = 0;
+		virtual bool for_each(html_node& node) = 0;
 
 		// Callback that is called when traversal ends
-		virtual bool end(xml_node& node);
+		virtual bool end(html_node& node);
 	};
 
-	// Parsing status, returned as part of xml_parse_result object
-	enum xml_parse_status
+	// Parsing status, returned as part of html_parse_result object
+	enum html_parse_status
 	{
 		status_ok = 0,              // No error
 
@@ -692,19 +692,19 @@ namespace pugi
 	};
 
 	// Parsing result
-	struct PUGIHTML_CLASS xml_parse_result
+	struct PUGIHTML_CLASS html_parse_result
 	{
-		// Parsing status (see xml_parse_status)
-		xml_parse_status status;
+		// Parsing status (see html_parse_status)
+		html_parse_status status;
 
 		// Last parsed offset (in char_t units from start of input data)
 		ptrdiff_t offset;
 
 		// Source document encoding
-		xml_encoding encoding;
+		html_encoding encoding;
 
         // Default constructor, initializes object to failed state
-		xml_parse_result();
+		html_parse_result();
 
 		// Cast to bool operator
 		operator bool() const;
@@ -714,7 +714,7 @@ namespace pugi
 	};
 
 	// Document class (DOM tree root)
-	class PUGIHTML_CLASS xml_document: public xml_node
+	class PUGIHTML_CLASS html_document: public html_node
 	{
 	private:
 		char_t* _buffer;
@@ -722,66 +722,66 @@ namespace pugi
 		char _memory[192];
 		
 		// Non-copyable semantics
-		xml_document(const xml_document&);
-		const xml_document& operator=(const xml_document&);
+		html_document(const html_document&);
+		const html_document& operator=(const html_document&);
 
 		void create();
 		void destroy();
 
-		xml_parse_result load_buffer_impl(void* contents, size_t size, unsigned int options, xml_encoding encoding, bool is_mutable, bool own);
+		html_parse_result load_buffer_impl(void* contents, size_t size, unsigned int options, html_encoding encoding, bool is_mutable, bool own);
 
 	public:
 		// Default constructor, makes empty document
-		xml_document();
+		html_document();
 
 		// Destructor, invalidates all node/attribute handles to this document
-		~xml_document();
+		~html_document();
 
         // Removes all nodes, leaving the empty document
 		void reset();
 
         // Removes all nodes, then copies the entire contents of the specified document
-		void reset(const xml_document& proto);
+		void reset(const html_document& proto);
 
 	#ifndef PUGIHTML_NO_STL
 		// Load document from stream.
-		xml_parse_result load(std::basic_istream<char, std::char_traits<char> >& stream, unsigned int options = parse_default, xml_encoding encoding = encoding_auto);
-		xml_parse_result load(std::basic_istream<wchar_t, std::char_traits<wchar_t> >& stream, unsigned int options = parse_default);
+		html_parse_result load(std::basic_istream<char, std::char_traits<char> >& stream, unsigned int options = parse_default, html_encoding encoding = encoding_auto);
+		html_parse_result load(std::basic_istream<wchar_t, std::char_traits<wchar_t> >& stream, unsigned int options = parse_default);
 	#endif
 
 		// Load document from zero-terminated string. No encoding conversions are applied.
-		xml_parse_result load(const char_t* contents, unsigned int options = parse_default);
+		html_parse_result load(const char_t* contents, unsigned int options = parse_default);
 
 		// Load document from file
-		xml_parse_result load_file(const char* path, unsigned int options = parse_default, xml_encoding encoding = encoding_auto);
-		xml_parse_result load_file(const wchar_t* path, unsigned int options = parse_default, xml_encoding encoding = encoding_auto);
+		html_parse_result load_file(const char* path, unsigned int options = parse_default, html_encoding encoding = encoding_auto);
+		html_parse_result load_file(const wchar_t* path, unsigned int options = parse_default, html_encoding encoding = encoding_auto);
 
 		// Load document from buffer. Copies/converts the buffer, so it may be deleted or changed after the function returns.
-		xml_parse_result load_buffer(const void* contents, size_t size, unsigned int options = parse_default, xml_encoding encoding = encoding_auto);
+		html_parse_result load_buffer(const void* contents, size_t size, unsigned int options = parse_default, html_encoding encoding = encoding_auto);
 
 		// Load document from buffer, using the buffer for in-place parsing (the buffer is modified and used for storage of document data).
         // You should ensure that buffer data will persist throughout the document's lifetime, and free the buffer memory manually once document is destroyed.
-		xml_parse_result load_buffer_inplace(void* contents, size_t size, unsigned int options = parse_default, xml_encoding encoding = encoding_auto);
+		html_parse_result load_buffer_inplace(void* contents, size_t size, unsigned int options = parse_default, html_encoding encoding = encoding_auto);
 
 		// Load document from buffer, using the buffer for in-place parsing (the buffer is modified and used for storage of document data).
         // You should allocate the buffer with pugihtml allocation function; document will free the buffer when it is no longer needed (you can't use it anymore).
-		xml_parse_result load_buffer_inplace_own(void* contents, size_t size, unsigned int options = parse_default, xml_encoding encoding = encoding_auto);
+		html_parse_result load_buffer_inplace_own(void* contents, size_t size, unsigned int options = parse_default, html_encoding encoding = encoding_auto);
 
-		// Save HTML document to writer (semantics is slightly different from xml_node::print, see documentation for details).
-		void save(xml_writer& writer, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, xml_encoding encoding = encoding_auto) const;
+		// Save HTML document to writer (semantics is slightly different from html_node::print, see documentation for details).
+		void save(html_writer& writer, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, html_encoding encoding = encoding_auto) const;
 
 	#ifndef PUGIHTML_NO_STL
-		// Save HTML document to stream (semantics is slightly different from xml_node::print, see documentation for details).
-		void save(std::basic_ostream<char, std::char_traits<char> >& stream, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, xml_encoding encoding = encoding_auto) const;
+		// Save HTML document to stream (semantics is slightly different from html_node::print, see documentation for details).
+		void save(std::basic_ostream<char, std::char_traits<char> >& stream, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, html_encoding encoding = encoding_auto) const;
 		void save(std::basic_ostream<wchar_t, std::char_traits<wchar_t> >& stream, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default) const;
 	#endif
 
 		// Save HTML to file
-		bool save_file(const char* path, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, xml_encoding encoding = encoding_auto) const;
-		bool save_file(const wchar_t* path, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, xml_encoding encoding = encoding_auto) const;
+		bool save_file(const char* path, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, html_encoding encoding = encoding_auto) const;
+		bool save_file(const wchar_t* path, const char_t* indent = PUGIHTML_TEXT("\t"), unsigned int flags = format_default, html_encoding encoding = encoding_auto) const;
 
         // Get document element
-        xml_node document_element() const;
+        html_node document_element() const;
 	};
 
 #ifndef PUGIHTML_NO_XPATH
@@ -958,29 +958,29 @@ namespace pugi
 	};
 	#endif
 	
-	// XPath node class (either xml_node or xml_attribute)
+	// XPath node class (either html_node or html_attribute)
 	class PUGIHTML_CLASS xpath_node
 	{
 	private:
-		xml_node _node;
-		xml_attribute _attribute;
+		html_node _node;
+		html_attribute _attribute;
 	
-    	typedef xml_node xpath_node::*unspecified_bool_type;
+    	typedef html_node xpath_node::*unspecified_bool_type;
 
 	public:
 		// Default constructor; constructs empty XPath node
 		xpath_node();
 		
 		// Construct XPath node from HTML node/attribute
-		xpath_node(const xml_node& node);
-		xpath_node(const xml_attribute& attribute, const xml_node& parent);
+		xpath_node(const html_node& node);
+		xpath_node(const html_attribute& attribute, const html_node& parent);
 
 		// Get node/attribute, if any
-		xml_node node() const;
-		xml_attribute attribute() const;
+		html_node node() const;
+		html_attribute attribute() const;
 		
 		// Get parent of contained node/attribute
-		xml_node parent() const;
+		html_node parent() const;
 
     	// Safe bool conversion operator
 		operator unspecified_bool_type() const;
@@ -1089,8 +1089,8 @@ namespace pugi
 namespace std
 {
 	// Workarounds for (non-standard) iterator category detection for older versions (MSVC7/IC8 and earlier)
-	std::bidirectional_iterator_tag PUGIHTML_FUNCTION _Iter_cat(const pugi::xml_node_iterator&);
-	std::bidirectional_iterator_tag PUGIHTML_FUNCTION _Iter_cat(const pugi::xml_attribute_iterator&);
+	std::bidirectional_iterator_tag PUGIHTML_FUNCTION _Iter_cat(const pugi::html_node_iterator&);
+	std::bidirectional_iterator_tag PUGIHTML_FUNCTION _Iter_cat(const pugi::html_attribute_iterator&);
 }
 #endif
 
@@ -1098,8 +1098,8 @@ namespace std
 namespace std
 {
 	// Workarounds for (non-standard) iterator category detection
-	std::bidirectional_iterator_tag PUGIHTML_FUNCTION __iterator_category(const pugi::xml_node_iterator&);
-	std::bidirectional_iterator_tag PUGIHTML_FUNCTION __iterator_category(const pugi::xml_attribute_iterator&);
+	std::bidirectional_iterator_tag PUGIHTML_FUNCTION __iterator_category(const pugi::html_node_iterator&);
+	std::bidirectional_iterator_tag PUGIHTML_FUNCTION __iterator_category(const pugi::html_attribute_iterator&);
 }
 #endif
 

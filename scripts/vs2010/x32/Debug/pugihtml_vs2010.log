@@ -1,0 +1,18 @@
+﻿Build started 4/11/2012 1:52:36 PM.
+     1>Project "C:\agdev\Spiders and APIs\Shelob\ThirdParty\pugihtml\scripts\pugihtml_vs2010.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating "vs2010\x32\Debug\pugihtml.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       ClCompile:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /Od /Oy- /D _DEBUG /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /Fo"vs2010\x32\Debug\\" /Fd"vs2010\x32\pugihtml_d.pdb" /Gd /TP /analyze- /errorReport:prompt ..\src\pugihtml.cpp
+         pugihtml.cpp
+       Lib:
+         c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\Lib.exe /OUT:"vs2010\x32\pugihtml_d.lib" /NOLOGO vs2010\x32\Debug\pugihtml.obj
+         pugihtml_vs2010.vcxproj -> C:\agdev\Spiders and APIs\Shelob\ThirdParty\pugihtml\scripts\vs2010\x32\pugihtml_d.lib
+       FinalizeBuildStatus:
+         Deleting file "vs2010\x32\Debug\pugihtml.unsuccessfulbuild".
+         Touching "vs2010\x32\Debug\pugihtml.lastbuildstate".
+     1>Done Building Project "C:\agdev\Spiders and APIs\Shelob\ThirdParty\pugihtml\scripts\pugihtml_vs2010.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:00.70
