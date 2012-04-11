@@ -1,19 +1,21 @@
-pugixml 1.0 - an XML processing library
+pugihtml 1.0 - an HTML processing library based on pugixml
 
-Copyright (C) 2006-2010, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
-Report bugs and download new versions at http://pugixml.org/
+Copyright (c) 2012, by Kiril Gantchev (kgantchev @ gmail DOT com)
+Copyright (C) 2006-2010, by Arseny Kapoulkine (arseny DOT kapoulkine @ gmail DOT com)
 
-This is the distribution of pugixml, which is a C++ XML processing library,
+The original pugixml project can be found at http://pugixml.org/
+
+This is the distribution of pugihtml, which is a C++ HTML processing library,
 which consists of a DOM-like interface with rich traversal/modification
-capabilities, an extremely fast XML parser which constructs the DOM tree from
-an XML file/buffer, and an XPath 1.0 implementation for complex data-driven
+capabilities, an extremely fast HTML parser which constructs the DOM tree from
+an HTML file/buffer, and an XPath 1.0 implementation for complex data-driven
 tree queries. Full Unicode support is also available, with Unicode interface
 variants and conversions between different Unicode encodings (which happen
 automatically during parsing/saving).
 
 The distribution contains the following folders:
 
-	contrib/ - various contributions to pugixml
+	contrib/ - various contributions to pugihtml
 
 	docs/ - documentation
 		docs/samples - pugixml usage examples
@@ -29,7 +31,7 @@ The distribution contains the following folders:
 This library is distributed under the MIT License:
 
 Copyright (c) 2006-2010 Arseny Kapoulkine
-
+Copyright (c) 2012 Kiril Gantchev
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without
