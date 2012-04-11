@@ -1,5 +1,5 @@
-﻿Build started 4/11/2012 1:52:36 PM.
-     1>Project "C:\agdev\Spiders and APIs\Shelob\ThirdParty\pugihtml\scripts\pugihtml_vs2010.vcxproj" on node 2 (build target(s)).
+﻿Build started 4/11/2012 2:34:45 PM.
+     1>Project "C:\agdev\Spiders and APIs\Shelob\ThirdParty\pugihtml\scripts\pugihtml_vs2010.vcxproj" on node 4 (build target(s)).
      1>InitializeBuildStatus:
          Creating "vs2010\x32\Debug\pugihtml.unsuccessfulbuild" because "AlwaysCreate" was specified.
        ClCompile:
@@ -15,4 +15,4 @@
 
 Build succeeded.
 
-Time Elapsed 00:00:00.70
+Time Elapsed 00:00:01.21
