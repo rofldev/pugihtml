@@ -87,7 +87,7 @@ namespace std
 #	define PUGIHTML_CHAR char
 #endif
 
-namespace pugi
+namespace pugihtml
 {
 	// Character type used for all internal storage and operations; depends on PUGIHTML_WCHAR_MODE
 	typedef PUGIHTML_CHAR char_t;
@@ -99,7 +99,7 @@ namespace pugi
 }
 
 // The PugiHTML namespace
-namespace pugi
+namespace pugihtml
 {
 	// Tree node types
 	enum html_node_type
@@ -1089,8 +1089,8 @@ namespace pugi
 namespace std
 {
 	// Workarounds for (non-standard) iterator category detection for older versions (MSVC7/IC8 and earlier)
-	std::bidirectional_iterator_tag PUGIHTML_FUNCTION _Iter_cat(const pugi::html_node_iterator&);
-	std::bidirectional_iterator_tag PUGIHTML_FUNCTION _Iter_cat(const pugi::html_attribute_iterator&);
+	std::bidirectional_iterator_tag PUGIHTML_FUNCTION _Iter_cat(const pugihtml::html_node_iterator&);
+	std::bidirectional_iterator_tag PUGIHTML_FUNCTION _Iter_cat(const pugihtml::html_attribute_iterator&);
 }
 #endif
 
@@ -1098,8 +1098,8 @@ namespace std
 namespace std
 {
 	// Workarounds for (non-standard) iterator category detection
-	std::bidirectional_iterator_tag PUGIHTML_FUNCTION __iterator_category(const pugi::html_node_iterator&);
-	std::bidirectional_iterator_tag PUGIHTML_FUNCTION __iterator_category(const pugi::html_attribute_iterator&);
+	std::bidirectional_iterator_tag PUGIHTML_FUNCTION __iterator_category(const pugihtml::html_node_iterator&);
+	std::bidirectional_iterator_tag PUGIHTML_FUNCTION __iterator_category(const pugihtml::html_attribute_iterator&);
 }
 #endif
 

@@ -89,7 +89,7 @@ typedef __int32 int32_t;
 #	define DMC_VOLATILE
 #endif
 
-using namespace pugi;
+using namespace pugihtml;
 
 // Memory allocation
 namespace
@@ -397,7 +397,7 @@ namespace
 	}
 }
 
-namespace pugi
+namespace pugihtml
 {
 	/// A 'name=value' HTML attribute structure.
 	struct html_attribute_struct
@@ -2339,17 +2339,29 @@ namespace
 						++s;
 
 						char_t* name = cursor->name;
-						if (!name) THROW_ERROR(status_end_element_mismatch, s);
+						if (!name)
+                        {
+                            THROW_ERROR(status_end_element_mismatch, s);
+                        }
 						
 						while (IS_CHARTYPE(*s, ct_symbol))
 						{
-							if (*s++ != *name++) THROW_ERROR(status_end_element_mismatch, s);
+							if (*s++ != *name++)
+                            {
+                                THROW_ERROR(status_end_element_mismatch, s);
+                            }
 						}
 
 						if (*name)
 						{
-							if (*s == 0 && name[0] == endch && name[1] == 0) THROW_ERROR(status_bad_end_element, s);
-							else THROW_ERROR(status_end_element_mismatch, s);
+							if (*s == 0 && name[0] == endch && name[1] == 0)
+                            {
+                                THROW_ERROR(status_bad_end_element, s);
+                            }
+							else 
+                            {
+                                THROW_ERROR(status_end_element_mismatch, s);
+                            }
 						}
 							
 						POPNODE(); // Pop.
@@ -2377,8 +2389,14 @@ namespace
 					{
 						s = parse_exclamation(s, cursor, optmsk, endch);
 					}
-					else if (*s == 0 && endch == '?') THROW_ERROR(status_bad_pi, s);
-					else THROW_ERROR(status_unrecognized_tag, s);
+					else if (*s == 0 && endch == '?')
+                    {
+                        THROW_ERROR(status_bad_pi, s);
+                    }
+					else 
+                    {
+                        THROW_ERROR(status_unrecognized_tag, s);
+                    }
 				}
 				else
 				{
@@ -2418,7 +2436,10 @@ namespace
 			}
 
 			// check that last tag is closed
-			if (cursor != htmldoc) THROW_ERROR(status_end_element_mismatch, s);
+			if (cursor != htmldoc)
+            {
+                THROW_ERROR(status_end_element_mismatch, s);
+            }
 		}
 
 		static html_parse_result parse(char_t* buffer, size_t length, html_node_struct* root, unsigned int optmsk)
@@ -3238,7 +3259,7 @@ namespace
 #endif
 }
 
-namespace pugi
+namespace pugihtml
 {
 	html_writer_file::html_writer_file(void* file): file(file)
 	{
@@ -8990,7 +9011,7 @@ namespace
 	}
 }
 
-namespace pugi
+namespace pugihtml
 {
 #ifndef PUGIHTML_NO_EXCEPTIONS
 	xpath_exception::xpath_exception(const xpath_parse_result& result): _result(result)
