@@ -1,13 +1,13 @@
 /*
- * Boost.Foreach support for pugixml classes.
+ * Boost.Foreach support for pugihtml classes.
  * This file is provided to the public domain.
  * Written by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
  */
 
-#ifndef HEADER_PUGIXML_FOREACH_HPP
-#define HEADER_PUGIXML_FOREACH_HPP
+#ifndef HEADER_PUGIHTML_FOREACH_HPP
+#define HEADER_PUGIHTML_FOREACH_HPP
 
-#include "pugixml.hpp"
+#include "pugihtml.hpp"
 
 /*
  * These types add support for BOOST_FOREACH macro to xml_node and xml_document classes (child iteration only).
