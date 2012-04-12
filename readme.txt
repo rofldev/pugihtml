@@ -3,7 +3,7 @@ pugihtml 1.0 - an HTML processing library based on pugixml
 Copyright (c) 2012, by Kiril Gantchev (kgantchev @ gmail DOT com)
 
 This is the distribution of pugihtml, which is a C++ HTML processing library,
-which consists of a DOM-like interface with rich traversal/modification
+consisting of a DOM-like interface with rich traversal/modification
 capabilities, an extremely fast HTML parser which constructs the DOM tree from
 an HTML file/buffer, and an XPath 1.0 implementation for complex data-driven
 tree queries. Full Unicode support is also available, with Unicode interface
