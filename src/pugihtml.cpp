@@ -1874,6 +1874,15 @@ namespace
 		return result;
 	}
 
+    static inline void to_lower(char* str)
+    {
+        while(*str!=0)
+        { 
+            *str = tolower(*str);
+            str++;
+        }
+    }
+
 	struct html_parser
 	{
 		html_allocator alloc;
@@ -2210,25 +2219,43 @@ namespace
 			strconv_pcdata_t strconv_pcdata = get_strconv_pcdata(optmsk);
 			
 			char_t ch = 0;
+
+            // Point the cursor to the html document node
 			html_node_struct* cursor = htmldoc;
+
+            // Set the marker
 			char_t* mark = s;
 
+            // It's necessary to keep another mark when we have to roll
+            // back the name and the mark at the same time.
+            char_t* sMark = s;
+            char_t* nameMark = s;
+
+            // Parse while the current character is not '\0'
 			while (*s != 0)
 			{
+                // Check if the current character is the start tag character
 				if (*s == '<')
 				{
+                    // Move to the next character
 					++s;
 
-				LOC_TAG:
+                    // Check if the current character is a start symbol
+                LOC_TAG:
 					if (IS_CHARTYPE(*s, ct_start_symbol)) // '<#...'
 					{
 						PUSHNODE(node_element); // Append a new node to the tree.
 
+                        // Set the current element's name
 						cursor->name = s;
-
+                        
+                        // Scan while the current character is a symbol belonging
+                        // to the set of symbols acceptable within a tag. In other
+                        // words, scan until the termination symbol is discovered.
 						SCANWHILE(IS_CHARTYPE(*s, ct_symbol)); // Scan for a terminator.
 						ENDSEG(); // Save char in 'ch', terminate & step over.
-
+                        to_lower(cursor->name);// Conver the element name to lower case
+                        
 						if (ch == '>')
 						{
 							// end of tag
@@ -2251,7 +2278,9 @@ namespace
 									CHECK_ERROR(status_bad_attribute, s); //$ redundant, left for performance
 
 									ENDSEG(); // Save char in 'ch', terminate & step over.
+                                    to_lower(a->name); // Conver the attribute name to lower case
 									CHECK_ERROR(status_bad_attribute, s); //$ redundant, left for performance
+                                    
 
 									if (IS_CHARTYPE(ch, ct_space))
 									{
@@ -2313,7 +2342,7 @@ namespace
 									break;
 								}
 								else THROW_ERROR(status_bad_start_element, s);
-							}
+							}// while
 
 							// !!!
 						}
@@ -2341,17 +2370,39 @@ namespace
 						char_t* name = cursor->name;
 						if (!name)
                         {
-                            THROW_ERROR(status_end_element_mismatch, s);
+                            // TODO ignore exception
+                            //THROW_ERROR(status_end_element_mismatch, s);
+                            // TODO remove the code below
+                            if(name=='\0')
+                            {
+                                name[0] = '1';
+                                name = '\0';
+                            }
                         }
 						
+                        sMark = s;
+                        nameMark = name;
+                        // Read the name while the character is a symbol
 						while (IS_CHARTYPE(*s, ct_symbol))
 						{
+                            // Check if we're closing the correct tag name:
+                            // if the cursor tag does not match the current
+                            // closing tag then throw an exception.
 							if (*s++ != *name++)
                             {
-                                THROW_ERROR(status_end_element_mismatch, s);
+                                // TODO POPNODE or ignore exception
+                                //THROW_ERROR(status_end_element_mismatch, s);
+
+                                // Return to the last position where we started
+                                // reading the expected closing tag name.
+                                s = sMark;
+                                name = nameMark;
+                                break;
                             }
 						}
 
+
+                        // Check if the end element is valid
 						if (*name)
 						{
 							if (*s == 0 && name[0] == endch && name[1] == 0)
@@ -2360,21 +2411,45 @@ namespace
                             }
 							else 
                             {
-                                THROW_ERROR(status_end_element_mismatch, s);
+                                // TODO remove the code below
+                                if(name=='\0')
+                                {
+                                    name[0] = '1';
+                                    name = '\0';
+                                }
+                                // TODO POPNODE or ignore exception
+                                //THROW_ERROR(status_end_element_mismatch, s);
                             }
 						}
-							
+						
+                        // The tag was closed so we have to pop the
+                        // node off the "stack".
 						POPNODE(); // Pop.
 
 						SKIPWS();
 
+                        // If there end of the string is reached.
 						if (*s == 0)
 						{
-							if (endch != '>') THROW_ERROR(status_bad_end_element, s);
+                            // Check if the end character specified is the
+                            // same as the closing tag.
+							if (endch != '>') 
+                            {
+                                THROW_ERROR(status_bad_end_element, s);
+                            }
 						}
 						else
 						{
-							if (*s != '>') THROW_ERROR(status_bad_end_element, s);
+                            // Skip the end character becaue the tag
+                            // was closed and the node was popped off
+                            // the "stack".
+							if (*s != '>') 
+                            {
+                                // Continue parsing
+                                continue;
+                                // TODO ignore the exception
+                                // THROW_ERROR(status_bad_end_element, s);
+                            }
 							++s;
 						}
 					}
@@ -2383,7 +2458,10 @@ namespace
 						s = parse_question(s, cursor, optmsk, endch);
 
 						assert(cursor);
-						if ((cursor->header & html_memory_page_type_mask) + 1 == node_declaration) goto LOC_ATTRIBUTES;
+						if ((cursor->header & html_memory_page_type_mask) + 1 == node_declaration) 
+                        {
+                            goto LOC_ATTRIBUTES;
+                        }
 					}
 					else if (*s == '!') // '<!...'
 					{
@@ -2435,10 +2513,12 @@ namespace
 				}
 			}
 
-			// check that last tag is closed
+			// Check that last tag is closed
 			if (cursor != htmldoc)
             {
-                THROW_ERROR(status_end_element_mismatch, s);
+                // TODO POPNODE or ignore exception
+                // THROW_ERROR(status_end_element_mismatch, s);
+                cursor = htmldoc;
             }
 		}
 
