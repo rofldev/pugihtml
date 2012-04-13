@@ -1,13 +1,13 @@
 /**
  * pugihtml parser - version 1.0
  * --------------------------------------------------------
- * Copyright (C) 2012, by Kiril Gantchev (kgantchev @ gmail DOT com)
+ * Copyright (C) 2012, by Kiril Gantchev (kgantchev [AT] gmail [DOT] com)
  *
  * This library is distributed under the MIT License. See notice at the end
  * of this file.
  *
  * This work is based on the pugxml parser, which is: 
- * Copyright (C) 2006-2010, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
+ * Copyright (C) 2006-2010, by Arseny Kapoulkine (arseny [DOT] kapoulkine [AT] gmail [DOT] com)
  */
 
 
