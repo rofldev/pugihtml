@@ -1,6 +1,6 @@
 pugihtml 1.0 - an HTML processing library based on pugixml
 
-Copyright (c) 2012, by Kiril Gantchev (kgantchev [AT] gmail [DOT] com)
+Copyright (c) 2012, by Kiril Gantchev (kgantchev [AT] adgooroo [DOT] com)
 
 This is the distribution of pugihtml, which is a C++ HTML processing library,
 consisting of a DOM-like interface with rich traversal/modification
