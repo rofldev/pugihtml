@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <setjmp.h>
 #include <wchar.h>
+#include <set>
 
 #ifndef PUGIHTML_NO_XPATH
 #	include <math.h>
@@ -185,13 +186,75 @@ namespace
 
 namespace
 {
+    #define ARRAYSIZE(ar)  (sizeof(ar) / sizeof(ar[0]))
+    #define TOUPPER(X){ if((X) >= 'a' && (X) <= 'z') {(X) -= ('A' - 'a');} }
+    
+    static inline void to_upper(char_t* str)
+    {
+        while(*str!=0)
+        { 
+            TOUPPER(*str);
+            str++;
+        }
+    }
+    
+    /// Comparator optimized for speed
+    struct TagSetComparator
+    {
+        ///// A specialized comparison of two strings: the first string
+        ///// should always be upper case (since we're using this in the
+        ///// html tag and attribute sets).
+        //static inline int strcasecmp(const char_t *s1, const char_t *s2)
+        //{
+        //    char_t c1, c2;
+        //    do 
+        //    {
+        //        c1 = *s1++;
+        //        c2 = *s2++;
+        //        TOUPPER(c2);
+        //    } while((c1 == c2) && (s1 != '\0'));
+        //    return (int) c1-c2;
+        //}
+
+        inline bool operator()(const char_t *s1, const char_t *s2) const
+        {
+            return strcmp(s1, s2) < 0;
+        }
+    };
+    
 	static const size_t html_memory_page_size = 32768;
+    char_t* attributes[] = {"ACCESSKEY", "CLASS", "CONTENTEDITABLENEW", 
+        "CONTEXTMENUNEW", "DIR", "DRAGGABLENEW", "DROPZONENEW", "HIDDENNEW", 
+        "ID", "LANG", "SPELLCHECKNEW", "STYLE", "TABINDEX", "TITLE"};
+
+    char_t* elements[] = {"!DOCTYPE", "A", "ABBR", "ACRONYM", "ADDRESS", 
+        "APPLET", "AREA", "ARTICLE", "ASIDE", "AUDIO", "B", "BASE", 
+        "BASEFONT", "BDI", "BDO", "BIG", "BLOCKQUOTE", "BODY", "BR", 
+        "BUTTON", "CANVAS", "CAPTION", "CENTER", "CITE", "CODE", "COL", 
+        "COLGROUP", "COMMAND", "DATALIST", "DD", "DEL", "DETAILS", 
+        "DFN", "DIR", "DIV", "DL", "DT", "EM", "EMBED", "FIELDSET", 
+        "FIGCAPTION", "FIGURE", "FONT", "FOOTER", "FORM", "FRAME", 
+        "FRAMESET", "H1> TO <H6", "HEAD", "HEADER", "HGROUP", "HR", 
+        "HTML", "I", "IFRAME", "IMG", "INPUT", "INS", "KEYGEN", "KBD", 
+        "LABEL", "LEGEND", "LI", "LINK", "MAP", "MARK", "MENU", "META", 
+        "METER", "NAV", "NOFRAMES", "NOSCRIPT", "OBJECT", "OL", "OPTGROUP", 
+        "OPTION", "OUTPUT", "P", "PARAM", "PRE", "PROGRESS", "Q", "RP", 
+        "RT", "RUBY", "S", "SAMP", "SCRIPT", "SECTION", "SELECT", "SMALL", 
+        "SOURCE", "SPAN", "STRIKE", "STRONG", "STYLE", "SUB", "SUMMARY", 
+        "SUP", "TABLE", "TBODY", "TD", "TEXTAREA", "TFOOT", "TH", "THEAD", 
+        "TIME", "TITLE", "TR", "TRACK", "TT", "U", "UL", "VAR", "VIDEO", "WBR"};
 
 	static const uintptr_t html_memory_page_alignment = 32;
 	static const uintptr_t html_memory_page_pointer_mask = ~(html_memory_page_alignment - 1);
 	static const uintptr_t html_memory_page_name_allocated_mask = 16;
 	static const uintptr_t html_memory_page_value_allocated_mask = 8;
 	static const uintptr_t html_memory_page_type_mask = 7;
+    
+    /// HTML5 attributes
+    static const std::set<char_t*, TagSetComparator> html_attributes(attributes, attributes+ARRAYSIZE(attributes));
+    
+    /// HTML5 elements
+    static const std::set<char_t*, TagSetComparator> html_elements(elements, elements+ARRAYSIZE(elements));
 
 	struct html_allocator;
 
@@ -1873,16 +1936,7 @@ namespace
 
 		return result;
 	}
-
-    static inline void to_lower(char* str)
-    {
-        while(*str!=0)
-        { 
-            *str = tolower(*str);
-            str++;
-        }
-    }
-
+    
 	struct html_parser
 	{
 		html_allocator alloc;
@@ -2254,7 +2308,7 @@ namespace
                         // words, scan until the termination symbol is discovered.
 						SCANWHILE(IS_CHARTYPE(*s, ct_symbol)); // Scan for a terminator.
 						ENDSEG(); // Save char in 'ch', terminate & step over.
-                        to_lower(cursor->name);// Conver the element name to lower case
+                        to_upper(cursor->name);// Conver the element name to lower case
                         
 						if (ch == '>')
 						{
@@ -2278,7 +2332,7 @@ namespace
 									CHECK_ERROR(status_bad_attribute, s); //$ redundant, left for performance
 
 									ENDSEG(); // Save char in 'ch', terminate & step over.
-                                    to_lower(a->name); // Conver the attribute name to lower case
+                                    to_upper(a->name); // Conver the attribute name to lower case
 									CHECK_ERROR(status_bad_attribute, s); //$ redundant, left for performance
                                     
 
