@@ -149,14 +149,12 @@
     <Lib />
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\htmlwriter.hpp" />
     <ClInclude Include="..\src\pugiutil.hpp" />
     <ClInclude Include="..\src\pugihtml.hpp" />
     <ClInclude Include="..\src\pugiconfig.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\pugihtml.cpp" />
-    <ClCompile Include="..\src\htmlwriter.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
