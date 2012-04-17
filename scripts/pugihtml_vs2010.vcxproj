@@ -76,12 +76,13 @@
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <ProgramDataBaseFileName>$(OutDir)pugihtml_d.pdb</ProgramDataBaseFileName>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <MinimalRebuild>true</MinimalRebuild>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -149,11 +150,14 @@
     <Lib />
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\common.hpp" />
+    <ClInclude Include="..\src\memory.hpp" />
     <ClInclude Include="..\src\pugiutil.hpp" />
     <ClInclude Include="..\src\pugihtml.hpp" />
     <ClInclude Include="..\src\pugiconfig.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\memory.cpp" />
     <ClCompile Include="..\src\pugihtml.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

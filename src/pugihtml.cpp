@@ -3,8 +3,7 @@
  * --------------------------------------------------------
  * Copyright (C) 2012, by Kiril Gantchev (kgantchev [AT] gmail [DOT] com)
  *
- * This library is distributed under the MIT License. See notice at the end
- * of this file.
+ * This library is distributed under the MIT License. See notice in license.txt
  *
  * This work is based on the pugxml parser, which is: 
  * Copyright (C) 2006-2010, by Arseny Kapoulkine (arseny [DOT] kapoulkine [AT] gmail [DOT] com)
@@ -12,6 +11,7 @@
 
 #include "pugihtml.hpp"
 #include "pugiutil.hpp"
+#include "memory.hpp"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -91,24 +91,6 @@ typedef __int32 int32_t;
 #endif
 
 using namespace pugihtml;
-
-// Memory allocation
-namespace
-{
-	void* default_allocate(size_t size)
-	{
-		return malloc(size);
-	}
-
-	void default_deallocate(void* ptr)
-	{
-		free(ptr);
-	}
-
-	allocation_function global_allocate = default_allocate;
-	deallocation_function global_deallocate = default_deallocate;
-}
-
 // String utilities
 namespace
 {
@@ -183,220 +165,6 @@ namespace
 	};
 }
 #endif
-
-namespace
-{
-	static const size_t html_memory_page_size = 32768;
-    static const uintptr_t html_memory_page_alignment = 32;
-	static const uintptr_t html_memory_page_pointer_mask = ~(html_memory_page_alignment - 1);
-	static const uintptr_t html_memory_page_name_allocated_mask = 16;
-	static const uintptr_t html_memory_page_value_allocated_mask = 8;
-	static const uintptr_t html_memory_page_type_mask = 7;
-    
-
-	struct html_allocator;
-
-	struct html_memory_page
-	{
-		static html_memory_page* construct(void* memory)
-		{
-			if (!memory) return 0; //$ redundant, left for performance
-
-			html_memory_page* result = static_cast<html_memory_page*>(memory);
-
-			result->allocator = 0;
-			result->memory = 0;
-			result->prev = 0;
-			result->next = 0;
-			result->busy_size = 0;
-			result->freed_size = 0;
-
-			return result;
-		}
-
-		html_allocator* allocator;
-
-		void* memory;
-
-		html_memory_page* prev;
-		html_memory_page* next;
-
-		size_t busy_size;
-		size_t freed_size;
-
-		char data[1];
-	};
-
-	struct html_memory_string_header
-	{
-		uint16_t page_offset; // offset from page->data
-		uint16_t full_size; // 0 if string occupies whole page
-	};
-
-	struct html_allocator
-	{
-		html_allocator(html_memory_page* root): _root(root), _busy_size(root->busy_size)
-		{
-		}
-
-		html_memory_page* allocate_page(size_t data_size)
-		{
-			size_t size = offsetof(html_memory_page, data) + data_size;
-
-			// allocate block with some alignment, leaving memory for worst-case padding
-			void* memory = global_allocate(size + html_memory_page_alignment);
-			if (!memory) return 0;
-
-			// align upwards to page boundary
-			void* page_memory = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(memory) + (html_memory_page_alignment - 1)) & ~(html_memory_page_alignment - 1));
-
-			// prepare page structure
-			html_memory_page* page = html_memory_page::construct(page_memory);
-
-			page->memory = memory;
-			page->allocator = _root->allocator;
-
-			return page;
-		}
-
-		static void deallocate_page(html_memory_page* page)
-		{
-			global_deallocate(page->memory);
-		}
-
-		void* allocate_memory_oob(size_t size, html_memory_page*& out_page);
-
-		void* allocate_memory(size_t size, html_memory_page*& out_page)
-		{
-			if (_busy_size + size > html_memory_page_size) return allocate_memory_oob(size, out_page);
-
-			void* buf = _root->data + _busy_size;
-
-			_busy_size += size;
-
-			out_page = _root;
-
-			return buf;
-		}
-
-		void deallocate_memory(void* ptr, size_t size, html_memory_page* page)
-		{
-			if (page == _root) page->busy_size = _busy_size;
-
-			assert(ptr >= page->data && ptr < page->data + page->busy_size);
-			(void)!ptr;
-
-			page->freed_size += size;
-			assert(page->freed_size <= page->busy_size);
-
-			if (page->freed_size == page->busy_size)
-			{
-				if (page->next == 0)
-				{
-					assert(_root == page);
-
-					// top page freed, just reset sizes
-					page->busy_size = page->freed_size = 0;
-					_busy_size = 0;
-				}
-				else
-				{
-					assert(_root != page);
-					assert(page->prev);
-
-					// remove from the list
-					page->prev->next = page->next;
-					page->next->prev = page->prev;
-
-					// deallocate
-					deallocate_page(page);
-				}
-			}
-		}
-
-		char_t* allocate_string(size_t length)
-		{
-			// allocate memory for string and header block
-			size_t size = sizeof(html_memory_string_header) + length * sizeof(char_t);
-			
-			// round size up to pointer alignment boundary
-			size_t full_size = (size + (sizeof(void*) - 1)) & ~(sizeof(void*) - 1);
-
-			html_memory_page* page;
-			html_memory_string_header* header = static_cast<html_memory_string_header*>(allocate_memory(full_size, page));
-
-			if (!header) return 0;
-
-			// setup header
-			ptrdiff_t page_offset = reinterpret_cast<char*>(header) - page->data;
-
-			assert(page_offset >= 0 && page_offset < (1 << 16));
-			header->page_offset = static_cast<uint16_t>(page_offset);
-
-			// full_size == 0 for large strings that occupy the whole page
-			assert(full_size < (1 << 16) || (page->busy_size == full_size && page_offset == 0));
-			header->full_size = static_cast<uint16_t>(full_size < (1 << 16) ? full_size : 0);
-
-			return reinterpret_cast<char_t*>(header + 1);
-		}
-
-		void deallocate_string(char_t* string)
-		{
-			// get header
-			html_memory_string_header* header = reinterpret_cast<html_memory_string_header*>(string) - 1;
-
-			// deallocate
-			size_t page_offset = offsetof(html_memory_page, data) + header->page_offset;
-			html_memory_page* page = reinterpret_cast<html_memory_page*>(reinterpret_cast<char*>(header) - page_offset);
-
-			// if full_size == 0 then this string occupies the whole page
-			size_t full_size = header->full_size == 0 ? page->busy_size : header->full_size;
-
-			deallocate_memory(header, full_size, page);
-		}
-
-		html_memory_page* _root;
-		size_t _busy_size;
-	};
-
-	PUGIHTML_NO_INLINE void* html_allocator::allocate_memory_oob(size_t size, html_memory_page*& out_page)
-	{
-		const size_t large_allocation_threshold = html_memory_page_size / 4;
-
-		html_memory_page* page = allocate_page(size <= large_allocation_threshold ? html_memory_page_size : size);
-		if (!page) return 0;
-
-		if (size <= large_allocation_threshold)
-		{
-			_root->busy_size = _busy_size;
-
-			// insert page at the end of linked list
-			page->prev = _root;
-			_root->next = page;
-			_root = page;
-
-			_busy_size = size;
-		}
-		else
-		{
-			// insert page before the end of linked list, so that it is deleted as soon as possible
-			// the last page is not deleted even if it's empty (see deallocate_memory)
-			assert(_root->prev);
-
-			page->prev = _root->prev;
-			page->next = _root;
-
-			_root->prev->next = page;
-			_root->prev = page;
-		}
-
-		// allocate inside page
-		page->busy_size = size;
-
-		out_page = page;
-		return page->data;
-	}
-}
 
 namespace pugihtml
 {
@@ -2157,7 +1925,16 @@ namespace
 					if (!ENDSWITH(*s, '>')) THROW_ERROR(status_bad_pi, s);
 					s += (*s == '>');
 
-					POPNODE();
+                    if(cursor->parent)
+                    {
+						POPNODE(); // Pop.
+                    }
+                    else
+                    {
+                        // We have reached the root node so do not 
+                        // attempt to pop anymore nodes
+                        return s;
+                    }
 				}
 				else if (IS_CHARTYPE(ch, ct_space))
 				{
@@ -2181,8 +1958,17 @@ namespace
 					{
 						// store value and step over >
 						cursor->value = value;
-						POPNODE();
-
+						
+                        if(cursor->parent)
+                        {
+						    POPNODE(); // Pop.
+                        }
+                        else
+                        {
+                            // We have reached the root node so do not 
+                            // attempt to pop anymore nodes
+                            return s;
+                        }
 						ENDSEG();
 
 						s += (*s == '>');
@@ -2223,10 +2009,6 @@ namespace
             char_t* sMark = s;
             char_t* nameMark = s;
 
-            // We also need to temporarily hold tags
-            char_t tmpTag[html_memory_page_size];
-            memset(tmpTag, 0, html_memory_page_size);
-
             // Parse while the current character is not '\0'
 			while (*s != 0)
 			{
@@ -2254,9 +2036,8 @@ namespace
                         // Save char in 'ch', terminate & step over.
                         ENDSEG();
 
-                        // Normalize the tag name if the tag exists in 
-                        // the set of known HTML elements.
-                        normalize(cursor->name, tmpTag, html_elements); 
+                        // Capitalize the tag name
+                        to_upper(cursor->name);
 
 						if (ch == '>')
 						{
@@ -2281,9 +2062,8 @@ namespace
 
 									ENDSEG(); // Save char in 'ch', terminate & step over.
                                     
-                                    // Normalize the tag name if the tag 
-                                    // exists in the set of known html attributes.
-                                    normalize(a->name, tmpTag, html_attributes); 
+                                    // Capitalize the attribute name
+                                    to_upper(a->name);
                                     
                                     //$ redundant, left for performance
 									CHECK_ERROR(status_bad_attribute, s); 
@@ -2326,13 +2106,31 @@ namespace
 									
 									if (*s == '>')
 									{
-										POPNODE();
+										if(cursor->parent)
+                                        {
+						                    POPNODE(); // Pop.
+                                        }
+                                        else
+                                        {
+                                            // We have reached the root node so do not 
+                                            // attempt to pop anymore nodes
+                                            break;
+                                        }
 										s++;
 										break;
 									}
 									else if (*s == 0 && endch == '>')
 									{
-										POPNODE();
+										if(cursor->parent)
+                                        {
+						                    POPNODE(); // Pop.
+                                        }
+                                        else
+                                        {
+                                            // We have reached the root node so do not 
+                                            // attempt to pop anymore nodes
+                                            break;
+                                        }
 										break;
 									}
 									else THROW_ERROR(status_bad_start_element, s);
@@ -2356,7 +2154,16 @@ namespace
 						{
 							if (!ENDSWITH(*s, '>')) THROW_ERROR(status_bad_start_element, s);
 
-							POPNODE(); // Pop.
+                            if(cursor->parent)
+                            {
+							    POPNODE(); // Pop.
+                            }
+                            else
+                            {
+                                // We have reached the root node so do not 
+                                // attempt to pop anymore nodes
+                                break;
+                            }
 
 							s += (*s == '>');
 						}
@@ -2378,59 +2185,56 @@ namespace
                         {
                             // TODO ignore exception
                             //THROW_ERROR(status_end_element_mismatch, s);
-                            // TODO remove the code below
-                            if(name=='\0')
-                            {
-                                name[0] = '1';
-                                name = '\0';
-                            }
                         }
-						
-                        sMark = s;
-                        nameMark = name;
-                        // Read the name while the character is a symbol
-						while (IS_CHARTYPE(*s, ct_symbol))
-						{
-                            // Check if we're closing the correct tag name:
-                            // if the cursor tag does not match the current
-                            // closing tag then throw an exception.
-							if (*s++ != *name++)
-                            {
-                                // TODO POPNODE or ignore exception
-                                //THROW_ERROR(status_end_element_mismatch, s);
-
-                                // Return to the last position where we started
-                                // reading the expected closing tag name.
-                                s = sMark;
-                                name = nameMark;
-                                break;
-                            }
-						}
-
-
-                        // Check if the end element is valid
-						if (*name)
-						{
-							if (*s == 0 && name[0] == endch && name[1] == 0)
-                            {
-                                THROW_ERROR(status_bad_end_element, s);
-                            }
-							else 
-                            {
-                                // TODO remove the code below
-                                if(name=='\0')
+                        else
+                        {
+                            sMark = s;
+                            nameMark = name;
+                            // Read the name while the character is a symbol
+						    while (IS_CHARTYPE(*s, ct_symbol))
+						    {
+                                // Check if we're closing the correct tag name:
+                                // if the cursor tag does not match the current
+                                // closing tag then throw an exception.
+							    if (*s++ != *name++)
                                 {
-                                    name[0] = '1';
-                                    name = '\0';
+                                    // TODO POPNODE or ignore exception
+                                    //THROW_ERROR(status_end_element_mismatch, s);
+
+                                    // Return to the last position where we started
+                                    // reading the expected closing tag name.
+                                    s = sMark;
+                                    name = nameMark;
+                                    break;
                                 }
-                                // TODO POPNODE or ignore exception
-                                //THROW_ERROR(status_end_element_mismatch, s);
-                            }
-						}
+						    }
+                            // Check if the end element is valid
+						    if (*name)
+						    {
+							    if (*s == 0 && name[0] == endch && name[1] == 0)
+                                {
+                                    THROW_ERROR(status_bad_end_element, s);
+                                }
+							    else 
+                                {
+                                    // TODO POPNODE or ignore exception
+                                    //THROW_ERROR(status_end_element_mismatch, s);
+                                }
+						    }
+                        }
 						
                         // The tag was closed so we have to pop the
                         // node off the "stack".
-						POPNODE(); // Pop.
+						if(cursor->parent)
+                        {
+							POPNODE(); // Pop.
+                        }
+                        else
+                        {
+                            // We have reached the root node so do not 
+                            // attempt to pop anymore nodes
+                            break;
+                        }
 
 						SKIPWS();
 
@@ -2501,7 +2305,7 @@ namespace
 						cursor->value = s; // Save the offset.
 
 						s = strconv_pcdata(s);
-								
+
 						POPNODE(); // Pop since this is a standalone.
 						
 						if (!*s) break;
@@ -9655,28 +9459,3 @@ namespace pugihtml
 }
 
 #endif
-
-/**
- * Copyright (c) 2012 Kiril Gantchev
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- */

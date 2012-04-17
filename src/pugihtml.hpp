@@ -3,8 +3,7 @@
  * --------------------------------------------------------
  * Copyright (C) 2012, by Kiril Gantchev (kgantchev [AT] gmail [DOT] com)
  *
- * This library is distributed under the MIT License. See notice at the end
- * of this file.
+ * This library is distributed under the MIT License. See notice in license.txt
  *
  * This work is based on the pugxml parser, which is: 
  * Copyright (C) 2006-2010, by Arseny Kapoulkine (arseny [DOT] kapoulkine [AT] gmail [DOT] com)
@@ -14,89 +13,8 @@
 #ifndef HEADER_PUGIHTML_HPP
 #define HEADER_PUGIHTML_HPP
 
-#include "pugiconfig.hpp"
-
-#ifndef PUGIHTML_NO_STL
-namespace std
-{
-	struct bidirectional_iterator_tag;
-
-#ifdef __SUNPRO_CC
-	// Sun C++ compiler has a bug which forces template argument names in forward declarations to be the same as in actual definitions
-	template <class _T> class allocator;
-	template <class _charT> struct char_traits;
-	template <class _charT, class _Traits> class basic_istream;
-	template <class _charT, class _Traits> class basic_ostream;
-	template <class _charT, class _Traits, class _Allocator> class basic_string;
-#else
-	// Borland C++ compiler has a bug which forces template argument names in forward declarations to be the same as in actual definitions
-	template <class _Ty> class allocator;
-	template <class _Ty> struct char_traits;
-	template <class _Elem, class _Traits> class basic_istream;
-	template <class _Elem, class _Traits> class basic_ostream;
-	template <class _Elem, class _Traits, class _Ax> class basic_string;
-#endif
-
-	// Digital Mars compiler has a bug which requires a forward declaration for explicit instantiation (otherwise type selection is messed up later, producing link errors)
-	// Also note that we have to declare char_traits as a class here, since it's defined that way
-#ifdef __DMC__
-	template <> class char_traits<char>;
-#endif
-}
-#endif
-
-// Macro for deprecated features
-#ifndef PUGIHTML_DEPRECATED
-#	if defined(__GNUC__)
-#		define PUGIHTML_DEPRECATED __attribute__((deprecated))
-#	elif defined(_MSC_VER) && _MSC_VER >= 1300
-#		define PUGIHTML_DEPRECATED __declspec(deprecated)
-#	else
-#		define PUGIHTML_DEPRECATED
-#	endif
-#endif
-
-// Include exception header for XPath
-#if !defined(PUGIHTML_NO_XPATH) && !defined(PUGIHTML_NO_EXCEPTIONS)
-#	include <exception>
-#endif
-
-// If no API is defined, assume default
-#ifndef PUGIHTML_API
-#   define PUGIHTML_API
-#endif
-
-// If no API for classes is defined, assume default
-#ifndef PUGIHTML_CLASS
-#   define PUGIHTML_CLASS PUGIHTML_API
-#endif
-
-// If no API for functions is defined, assume default
-#ifndef PUGIHTML_FUNCTION
-#   define PUGIHTML_FUNCTION PUGIHTML_API
-#endif
-
 #include <stddef.h>
-
-// Character interface macros
-#ifdef PUGIHTML_WCHAR_MODE
-#	define PUGIHTML_TEXT(t) L ## t
-#	define PUGIHTML_CHAR wchar_t
-#else
-#	define PUGIHTML_TEXT(t) t
-#	define PUGIHTML_CHAR char
-#endif
-
-namespace pugihtml
-{
-	// Character type used for all internal storage and operations; depends on PUGIHTML_WCHAR_MODE
-	typedef PUGIHTML_CHAR char_t;
-
-#ifndef PUGIHTML_NO_STL
-	// String type used for operations that work with STL string; depends on PUGIHTML_WCHAR_MODE
-	typedef std::basic_string<PUGIHTML_CHAR, std::char_traits<PUGIHTML_CHAR>, std::allocator<PUGIHTML_CHAR> > string_t;
-#endif
-}
+#include "common.hpp"
 
 // The PugiHTML namespace
 namespace pugihtml
@@ -1070,19 +988,6 @@ namespace pugihtml
 	std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> > PUGIHTML_FUNCTION as_wide(const char* str);
 	std::basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t> > PUGIHTML_FUNCTION as_wide(const std::basic_string<char, std::char_traits<char>, std::allocator<char> >& str);
 #endif
-
-	// Memory allocation function interface; returns pointer to allocated memory or NULL on failure
-	typedef void* (*allocation_function)(size_t size);
-	
-	// Memory deallocation function interface
-    typedef void (*deallocation_function)(void* ptr);
-
-    // Override default memory management functions. All subsequent allocations/deallocations will be performed via supplied functions.
-    void PUGIHTML_FUNCTION set_memory_management_functions(allocation_function allocate, deallocation_function deallocate);
-    
-    // Get current memory management functions
-    allocation_function PUGIHTML_FUNCTION get_memory_allocation_function();
-    deallocation_function PUGIHTML_FUNCTION get_memory_deallocation_function();
 }
 
 #if !defined(PUGIHTML_NO_STL) && (defined(_MSC_VER) || defined(__ICC))
@@ -1104,28 +1009,3 @@ namespace std
 #endif
 
 #endif
-
-/**
- * Copyright (c) 2012 Kiril Gantchev
- *
- * Permission is hereby granted, free of charge, to any person
- * obtaining a copy of this software and associated documentation
- * files (the "Software"), to deal in the Software without
- * restriction, including without limitation the rights to use,
- * copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following
- * conditions:
- *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
- * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
- * OTHER DEALINGS IN THE SOFTWARE.
- */
