@@ -1,6 +1,6 @@
 pugihtml 1.0 - an HTML processing library based on pugixml
 
-Copyright (c) 2012, by Kiril Gantchev (kgantchev [AT] adgooroo [DOT] com)
+Copyright (c) 2012 Adgooroo, LLC (kgantchev [AT] adgooroo [DOT] com)
 
 This is the distribution of pugihtml, which is a C++ HTML processing library,
 consisting of a DOM-like interface with rich traversal/modification
@@ -30,7 +30,7 @@ Copyright (C) 2006-2010, by Arseny Kapoulkine (arseny [DOT] kapoulkine [AT] gmai
 
 This library is distributed under the MIT License:
 
-Copyright (c) 2012 Kiril Gantchev
+Copyright (c) 2012 Adgooroo, LLC
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
 files (the "Software"), to deal in the Software without

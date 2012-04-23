@@ -1,7 +1,7 @@
 /**
  * pugihtml parser - version 1.0
  * --------------------------------------------------------
- * Copyright (C) 2012, by Kiril Gantchev (kgantchev [AT] gmail [DOT] com)
+ * Copyright (c) 2012 Adgooroo, LLC (kgantchev [AT] adgooroo [DOT] com)
  *
  * This library is distributed under the MIT License. See notice in license.txt
  *
