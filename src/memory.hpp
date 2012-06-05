@@ -12,6 +12,7 @@
 #ifndef MEMORY_HPP
 #define MEMORY_HPP
 #include "common.hpp"
+#include <stdlib.h>
 
 namespace pugihtml
 {

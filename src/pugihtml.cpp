@@ -29,6 +29,7 @@
 #	include <istream>
 #	include <ostream>
 #	include <string>
+#   include <algorithm>
 #endif
 
 // For placement new
@@ -127,6 +128,17 @@ namespace
 	
 		return lhs[count] == 0;
 	}
+#ifdef PUGIHTML_NO_STL
+    char_t* find_first_of(char_t* first1,char_t* last1,char_t* first2,char_t* last2){
+        for ( ; first1 != last1; ++first1 )
+            for (char_t* it=first2; it!=last2; ++it)
+                if (*it==*first1)          // or: if (comp(*it,*first)) for the pred version
+                    return first1;
+        return last1;
+    }
+#else
+#define find_first_of std::find_first_of
+#endif
 	
 #ifdef PUGIHTML_WCHAR_MODE
 	// Convert string to wide string, assuming all symbols are ASCII
@@ -2105,7 +2117,6 @@ namespace
                                         char_t temp;
                                         const char *sch="> /";
                                         //find the end of attribute,200 length is enough,it must return a position;
-                                        dp=std::find_first_of(s,s+200,sch,sch+2);
                                         temp=*dp;//backup the former char
                                         *dp='"';//hack at the end position;
                                         s=strconv_attribute(s,ch);
