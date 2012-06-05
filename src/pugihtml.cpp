@@ -2098,7 +2098,23 @@ namespace
 										}
 										else THROW_ERROR(status_bad_attribute, s);
 									}
-									else THROW_ERROR(status_bad_attribute, s);
+                                    else {//hot fix:try to fix that attribute=value situation;
+                                        ch='"';
+                                        a->value=s;
+                                        char_t* dp=s;
+                                        char_t temp;
+                                        const char *sch="> /";
+                                        //find the end of attribute,200 length is enough,it must return a position;
+                                        dp=std::find_first_of(s,s+200,sch,sch+2);
+                                        temp=*dp;//backup the former char
+                                        *dp='"';//hack at the end position;
+                                        s=strconv_attribute(s,ch);
+                                        *dp=temp;//restore it;
+                                        s--;// back it because we come to the " but it is > indeed;
+                                        if (IS_CHARTYPE(*s, ct_start_symbol)) THROW_ERROR(status_bad_attribute, s);
+
+                                    }
+                                    //THROW_ERROR(status_bad_attribute, s);
 								}
 								else if (*s == '/')
 								{
