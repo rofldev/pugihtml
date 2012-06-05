@@ -1,5 +1,6 @@
 #include "memory.hpp"
 #include <assert.h>
+#include <stddef.h>
 
 namespace pugihtml
 { 
